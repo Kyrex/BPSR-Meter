@@ -1,6 +1,13 @@
 // Estado global para modo Lite
 let isLiteMode = false;
 let liteModeType = 'dps'; // 'dps' o 'healer'
+
+let empty = false;
+let startTime;
+let currentLog;
+let logSelected = -1;
+let logs = new Array();
+
 const professionMap = {
     // Clases Principales
     '雷影剑士': { name: 'Stormblade', icon: 'Stormblade.png', role: 'dps' },
@@ -441,19 +448,36 @@ const professionMap = {
         };
     }
 
-    async function loadEncounter(encounterId) {
-        try {
-            const res = await fetch(`/api/encounters/${encounterId}`);
-            const result = await res.json();
+    function loadEncounter(encounterId) {
+        const log = logs.find((log) => log.id == encounterId);
+        console.log(`loading... ${log}`);
+        if(!log) return;
+        currentEncounterId = encounterId;
+        isViewingHistory = true;
+        renderHistoricalData(log.data);
+    }
 
-            if (result.code === 0 && result.encounter) {
-                currentEncounterId = encounterId;
-                isViewingHistory = true;
-                renderHistoricalData(result.encounter.data);
-            }
-        } catch (error) {
-            console.error('Error loading encounter:', error);
-        }
+    function saveEncounter(userData){
+        if(!userData) return;
+        
+        const userArray = Object.values(userData).filter(u => u.total_damage && u.total_damage.total > 0);
+        if(userArray.length <= 0) return;
+        
+        const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const totalDamage = userArray.reduce((acc, u) => acc + (u.total_damage?.total || 0), 0);
+        const timestamp = startTime;
+        const durationMs = Date.now() - timestamp;
+        
+        logs.push({
+            id: id,
+            timestamp: timestamp,
+            date: new Date(timestamp).toISOString(),
+            duration_ms: durationMs,
+            total_damage: totalDamage,
+            player_count: userArray.length,
+            data: userArray
+        });
+        logs = logs.slice(-5);
     }
 
     function renderHistoricalData(userData) {
@@ -494,11 +518,9 @@ const professionMap = {
         updateWindowSize();
     }
 
-    async function updateEncountersUI() {
+    function updateEncountersUI() {
         console.log('Updating encounters UI...');
-        const encounters = await fetchEncounters();
-        console.log(`Fetched ${encounters.length} encounters`);
-        renderEncounters(encounters);
+        renderEncounters(logs);
     }
 
     function getHealthColor(percentage) {
@@ -513,6 +535,7 @@ const professionMap = {
     }
 
     function formatStat(value) {
+        if(!value) return 0;
         if (value >= 1000000000000) {
             return (value / 1000000000000).toFixed(1) + 'T';
         }
@@ -672,10 +695,6 @@ const professionMap = {
     }
 
     async function fetchDataAndRender() {
-        if (isViewingHistory) {
-            return; // Don't update if viewing historical data
-        }
-
         const container = document.getElementById('player-bars-container');
         try {
             const [dataRes, diccRes, settingsRes] = await Promise.all([
@@ -690,11 +709,29 @@ const professionMap = {
             let userArray = Object.values(userData.user);
             userArray = userArray.filter(u => u.total_damage && u.total_damage.total > 0);
 
-            if (!userArray || userArray.length === 0) {
+            if ((!userArray || userArray.length === 0) && !isViewingHistory) {
                 loadingIndicator.style.display = 'flex'; // Mostrar el indicador de carga
                 playerBarsContainer.style.display = 'none'; // Ocultar el contenedor de barras
+
+                if(currentLog) {
+                    try{
+                        saveEncounter(currentLog);
+                        updateEncountersUI();
+                        startTime = null;
+                        currentLog = null;
+                        console.log(`Saving encounters... ${logs.length}`);
+                    }catch(err){
+                        console.log(err);
+                    }
+                }
+
                 updateSyncButtonState();
-                updateEncountersUI();
+                return;
+            }
+            if(!startTime) startTime = Date.now();
+            currentLog = userArray;
+
+            if (isViewingHistory) {
                 return;
             }
 
@@ -759,6 +796,7 @@ const professionMap = {
 
     // Actualizar UI cada 50ms
     setInterval(fetchDataAndRender, 50);
+    setInterval(updateEncountersUI, 10000);
     fetchDataAndRender();
     updateLogsUI();
     updateEncountersUI();

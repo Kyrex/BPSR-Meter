@@ -37,14 +37,14 @@
             <button class="control-button" id="lock-button" title="Bloquear posición" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-lock-open"></i></button>
             <button class="control-button" id="close-button" title="Cerrar ventana" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-xmark"></i></button>
         </header>
-        <div id="loading-indicator">
-            <i class="fa-solid fa-spinner fa-spin"></i>
-        </div>
-         <div style="display: flex; flex-direction:column; gap:6px; transform: translateY(36px);">
+        <div style="display: flex; flex-direction:column; gap:6px; transform: translateY(36px);">
             <div id="dps-timer" style="text-align:center;font-size:1.2rem;font-weight:700;margin-top:40px;min-height:28px;color:#e0e0e0;display:none; text-shadow: var(--text-shadow);"></div>
             <div id="encounters-section"></div>
             <div id="logs-section"></div>
         </div>
+        <div id="loading-indicator" style="margin-top: 10px;">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+        </div>         
         <main id="player-bars-container" style="margin-top: 40px; border: 1px solid rgba(255, 255, 255, 0.1); display: none;"></main>
         <div class="resize-handle" id="resize-handle" title="Arrastrar para redimensionar">
             <i class="fa-solid fa-grip-lines"></i>
