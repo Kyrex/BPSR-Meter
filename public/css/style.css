@@ -134,9 +134,10 @@ body {
     margin: 0;
     padding: 0; /* Eliminado el padding para evitar desbordamiento */
     overflow-x: hidden; /* Ocultar solo la barra de desplazamiento horizontal */
-    overflow-y: hidden; /* Ocultar la barra de desplazamiento vertical */
+    overflow-y: auto; /* Permitir scroll vertical */
     border: none; /* Eliminado el borde de la ventana */
     -webkit-app-region: no-drag; /* Deshabilita el arrastre por defecto en el body */
+    height: 100vh;
 }
 
 body.locked {

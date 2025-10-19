@@ -90,10 +90,13 @@ logToFile('==== INICIO DE ELECTRON ====');
         mainWindow = new BrowserWindow({
             width: 650,
             height: 600,
+            minWidth: 650,
+            minHeight: 200,
+            maxWidth: 650,
             transparent: true,
             frame: false,
             alwaysOnTop: true,
-            resizable: false,
+            resizable: true,
             webPreferences: {
                 preload: path.join(__dirname, 'preload.js'),
                 nodeIntegration: false,

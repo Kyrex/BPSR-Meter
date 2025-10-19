@@ -55,8 +55,11 @@ const professionMap = {
     const lockButton = document.getElementById('lock-button');
     const clickthroughButton = document.getElementById('clickthrough-button');
     const logsSection = document.getElementById('logs-section'); // Declarar logsSection aquí
+    const encountersSection = document.getElementById('encounters-section'); // Sección de encuentros guardados
     const loadingIndicator = document.getElementById('loading-indicator'); // Indicador de carga
     let isClickthrough = false; // Estado de click-through
+    let currentEncounterId = null; // ID del encuentro actualmente cargado
+    let isViewingHistory = false; // Si estamos viendo un encuentro histórico
 
     // Permitir interacción con Alt cuando está bloqueado
     document.addEventListener('keydown', (e) => {
@@ -348,6 +351,134 @@ const professionMap = {
         renderLogs(logs);
     }
 
+    async function fetchEncounters() {
+        try {
+            const res = await fetch('/api/encounters');
+            const result = await res.json();
+            return result.data || [];
+        } catch (error) {
+            console.error('Error fetching encounters:', error);
+            return [];
+        }
+    }
+
+    function formatDuration(ms) {
+        const seconds = Math.floor(ms / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 60) {
+            return `${diffMins}m ago`;
+        } else if (diffHours < 24) {
+            return `${diffHours}h ago`;
+        } else if (diffDays < 7) {
+            return `${diffDays}d ago`;
+        } else {
+            return date.toLocaleDateString();
+        }
+    }
+
+    function renderEncounters(encounters) {
+        if (!isViewingHistory && encounters.length === 0) {
+            encountersSection.style.display = 'none';
+            return;
+        }
+
+        encountersSection.style.display = 'block';
+        let html = '<select id="encounters-dropdown" style="width:100%;padding:6px 4px;border-radius:6px;font-size:1rem;background:rgba(0,0,0,0.3);color:var(--text-primary);border:1px solid rgba(255, 255, 255, 0.2);">';
+        html += '<option value="">Live DPS</option>';
+
+        encounters.forEach(enc => {
+            const selected = currentEncounterId === enc.id ? 'selected' : '';
+            const duration = formatDuration(enc.duration_ms);
+            const date = formatDate(enc.date);
+            const damage = formatStat(enc.total_damage);
+            html += `<option value="${enc.id}" ${selected}>${date} - ${damage} (${duration}) - ${enc.player_count} players</option>`;
+        });
+
+        html += '</select>';
+        encountersSection.innerHTML = html;
+
+        const dropdown = document.getElementById('encounters-dropdown');
+        dropdown.onchange = async function() {
+            if (this.value === '') {
+                currentEncounterId = null;
+                isViewingHistory = false;
+                fetchDataAndRender();
+            } else {
+                await loadEncounter(this.value);
+            }
+        };
+    }
+
+    async function loadEncounter(encounterId) {
+        try {
+            const res = await fetch(`/api/encounters/${encounterId}`);
+            const result = await res.json();
+
+            if (result.code === 0 && result.encounter) {
+                currentEncounterId = encounterId;
+                isViewingHistory = true;
+                renderHistoricalData(result.encounter.data);
+            }
+        } catch (error) {
+            console.error('Error loading encounter:', error);
+        }
+    }
+
+    function renderHistoricalData(userData) {
+        loadingIndicator.style.display = 'none';
+        playerBarsContainer.style.display = 'flex';
+
+        let userArray = Object.values(userData);
+        userArray = userArray.filter(u => u.total_damage && u.total_damage.total > 0);
+
+        const sumaTotalDamage = userArray.reduce((acc, u) => acc + (u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0), 0);
+
+        userArray.forEach(u => {
+            const userDamage = u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0;
+            u.damagePercent = sumaTotalDamage > 0 ? Math.max(0, Math.min(100, (userDamage / sumaTotalDamage) * 100)) : 0;
+        });
+
+        if (isLiteMode && liteModeType === 'healer') {
+            const totalHealingContribution = userArray.reduce((acc, u) => acc + (u.total_healing && u.total_healing.total ? Number(u.total_healing.total) : 0), 0);
+            userArray.forEach(u => {
+                const userHealing = u.total_healing && u.total_healing.total ? Number(u.total_healing.total) : 0;
+                u.healingPercent = totalHealingContribution > 0 ? Math.max(0, Math.min(100, (userHealing / totalHealingContribution) * 100)) : 0;
+            });
+            userArray.sort((a, b) => b.healingPercent - a.healingPercent);
+        } else {
+            userArray.sort((a, b) => (b.total_damage && b.total_damage.total ? Number(b.total_damage.total) : 0) - (a.total_damage && a.total_damage.total ? Number(a.total_damage.total) : 0));
+        }
+
+        userArray = userArray.slice(0, 20);
+
+        // Render using same logic as live data
+        const container = document.getElementById('player-bars-container');
+        if (isLiteMode) {
+            renderLiteBars(container, userArray);
+        } else {
+            renderAdvancedBars(container, userArray);
+        }
+
+        updateWindowSize();
+    }
+
+    async function updateEncountersUI() {
+        const encounters = await fetchEncounters();
+        renderEncounters(encounters);
+    }
+
     function getHealthColor(percentage) {
         const r1 = 220, g1 = 53, b1 = 69; // Rojo para HP bajo (#dc3545)
         const r2 = 40, g2 = 167, b2 = 69; // Verde para HP alto (#28a745)
@@ -384,7 +515,145 @@ const professionMap = {
         'rgba(255, 159, 64, 0.7)' // Naranja
     ];
 
+    function renderLiteBars(container, userArray) {
+        container.innerHTML = userArray.map((u, index) => {
+            const professionParts = u.profession.split('-');
+            const mainProfessionKey = professionParts[0];
+            const subProfessionKey = professionParts[1];
+            const mainProf = professionMap[mainProfessionKey] || defaultProfession;
+            const subProf = professionMap[subProfessionKey];
+            let prof = subProf || mainProf;
+            const nombre = u.name || '';
+            const color = playerColors[index % playerColors.length];
+            let barFillWidth, barFillBackground, value1, value2, iconHtml;
+
+            if (liteModeType === 'dps') {
+                barFillWidth = u.damagePercent;
+                barFillBackground = u.total_dps > 0 ? `linear-gradient(90deg, transparent, ${color})` : 'none';
+                iconHtml = "<span style='font-size:1.1em;margin-right:2px;'>🔥</span>";
+                value1 = `${formatStat(u.total_damage.total || 0)}`;
+                value2 = `${Math.round(u.damagePercent)}%`;
+            } else {
+                barFillWidth = u.healingPercent;
+                barFillBackground = u.total_healing && u.total_healing.total > 0 ? `linear-gradient(90deg, transparent, #28a745)` : 'none';
+                iconHtml = "<span style='font-size:1.1em;margin-right:2px; color: #28a745; text-shadow: 0 0 2px white, 0 0 2px white, 0 0 2px white, 0 0 2px white;'>⛨</span>";
+                value1 = `${formatStat((u.total_healing && u.total_healing.total) || 0)}`;
+                value2 = `${Math.round(u.healingPercent)}%`;
+            }
+
+            return `<div class="lite-bar" data-lite="true" data-rank="${u.rank}">
+                <div class="lite-bar-fill" style="width: ${barFillWidth}%; background: ${barFillBackground};"></div>
+                <div class="lite-bar-content" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; justify-content: space-between;">
+                    <div class="skill-analysis-button" title="Análisis de Habilidades">
+                        <i class="fa-solid fa-chart-bar"></i>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                        <img class="lite-bar-icon" src="icons/${prof.icon}" alt="icon" style="margin-left:2px; margin-right:5px;" />
+                        <span class="lite-bar-name">${nombre}</span>
+                    </div>
+                    <div class="lite-bar-values">
+                        <span class="lite-bar-damage">${value1} ${iconHtml}</span>
+                        <span class="lite-bar-percent">${value2}</span>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    function renderAdvancedBars(container, userArray) {
+        container.innerHTML = userArray.map((u, index) => {
+            const professionParts = u.profession.split('-');
+            const mainProfessionKey = professionParts[0];
+            const subProfessionKey = professionParts[1];
+            const mainProf = professionMap[mainProfessionKey] || defaultProfession;
+            const subProf = professionMap[subProfessionKey];
+            let prof = subProf || mainProf;
+            let professionName = mainProf.name;
+            if (subProf) {
+                professionName += ` - ${subProf.name}`;
+            }
+            const dps = Number(u.total_dps) || 0;
+            const totalHealing = u.total_healing ? (Number(u.total_healing.total) || 0) : 0;
+            const color = playerColors[index % playerColors.length];
+            const dpsColor = dps > 0 ? `linear-gradient(90deg, transparent, ${color})` : 'none';
+            const nombre = u.name || '';
+            const totalHits = u.total_count.total || 0;
+            const crit = (u.total_count.critical !== undefined && totalHits > 0) ? Math.round((u.total_count.critical / totalHits) * 100) : '0';
+            const lucky = (u.total_count.lucky !== undefined && totalHits > 0) ? Math.round((u.total_count.lucky / totalHits) * 100) : '0';
+            const peak = (u.realtime_dps_max !== undefined) ? u.realtime_dps_max : 0;
+            return `<div class="player-bar" data-rank="${u.rank}">
+                <div class="progress-fill" style="width: ${u.damagePercent}%; background: ${dpsColor}"></div>
+                <div class="bar-content">
+                    <div class="skill-analysis-button" title="Análisis de Habilidades">
+                        <i class="fa-solid fa-chart-bar"></i>
+                    </div>
+                    <div class="column name-col">
+                        <span class="player-name">${nombre}</span>
+                        <div class="additional-stat-row" style="height: 18px; margin-top: 1px; margin-bottom: 1px;">
+                            <span class="additional-stat-icon" style="color: #dc3545; position: absolute; left: 4px; z-index: 2;">❤</span>
+                            <div class="hp-bar-background">
+                                <div class="hp-bar-fill" style="width: ${((u.hp || 0) / (u.max_hp || 1)) * 100}%; background-color: ${getHealthColor(((u.hp || 0) / (u.max_hp || 1)) * 100)};"></div>
+                            </div>
+                            <span class="additional-stat-value" style="width: 100%; text-align: center; font-size: 0.8rem; color: white; text-shadow: 1px 1px 1px black;">${formatStat(u.hp || 0)}/${formatStat(u.max_hp || 0)}</span>
+                        </div>
+                        <span class="player-id">${professionName}</span>
+                    </div>
+                    <div class="column stats-col" style="margin-left: 40px;">
+                        <div class="stats-group">
+                            <div class="stat-row"><span class="stat-value">${formatStat(dps)}</span><span class="stat-label">DPS</span></div>
+                            <div class="stat-row"><span class="stat-value">${formatStat(u.total_hps || 0)}</span><span class="stat-label" style="color: #28a745;">HPS</span></div>
+                            <div class="stat-row"><span class="stat-value">${formatStat(u.taken_damage)}</span><span class="stat-label" style="color: #ffc107;">DT</span></div>
+                        </div>
+                    </div>
+                    <div class="column icon-col" style="flex-direction: column; justify-content: center; align-items: center; text-align: center; min-width: 65px; position: relative; margin-left: -10px;">
+                        <img class="class-icon" src="icons/${prof.icon}" alt="icon" style="height: 42px; width: 42px;">
+                        <span style="font-size: 0.8rem; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.5); padding: 0 4px; border-radius: 5px; position: absolute; top: 12.5px; left: 50%; transform: translateX(-50%); text-shadow: 0 0 2px rgba(0,0,0,0.7);">${Math.round(u.damagePercent)}%</span>
+                    </div>
+                    <div class="column extra-col" style="margin-left: -10px;">
+                        <div class="stats-extra">
+                            <div class="stat-row">
+                                <span class="stat-label">CRIT</span>
+                                <span class="stat-icon"> ✸</span>
+                                <span class="stat-value">${crit}%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">LUCK</span>
+                                <span class="stat-icon"> ☘</span>
+                                <span class="stat-value">${lucky}%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">MAX</span>
+                                <span class="stat-icon"> ⚔</span>
+                                <span class="stat-value">${formatStat(peak)}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column additional-stats-col">
+                        <div class="additional-stats-group">
+                            <div class="additional-stat-row">
+                                <span class="additional-stat-icon" style="font-weight: bold;">GS</span>
+                                <span class="additional-stat-value">${formatStat(u.fightPoint)}</span>
+                            </div>
+                            <div class="additional-stat-row">
+                                <span class="additional-stat-icon">🔥</span>
+                                <span class="additional-stat-value">${formatStat(u.total_damage.total || 0)}</span>
+                            </div>
+                            <div class="additional-stat-row">
+                                <span class="additional-stat-icon" style="color: #28a745;">⛨</span>
+                                <span class="additional-stat-value">${formatStat(u.total_healing.total || 0)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
     async function fetchDataAndRender() {
+        if (isViewingHistory) {
+            return; // Don't update if viewing historical data
+        }
+
         const container = document.getElementById('player-bars-container');
         try {
             const [dataRes, diccRes, settingsRes] = await Promise.all([
@@ -451,136 +720,9 @@ const professionMap = {
             userArray = userArray.slice(0, 20);
 
             if (isLiteMode) {
-                container.innerHTML = userArray.map((u, index) => {
-                    const professionParts = u.profession.split('-');
-                    const mainProfessionKey = professionParts[0];
-                    const subProfessionKey = professionParts[1];
-                    const mainProf = professionMap[mainProfessionKey] || defaultProfession;
-                    const subProf = professionMap[subProfessionKey];
-                    let prof = subProf || mainProf;
-                    const nombre = u.name || '';
-                    const color = playerColors[index % playerColors.length];
-                    let barFillWidth, barFillBackground, value1, value2, iconHtml;
-
-                    if (liteModeType === 'dps') {
-                        barFillWidth = u.damagePercent;
-                        barFillBackground = u.total_dps > 0 ? `linear-gradient(90deg, transparent, ${color})` : 'none';
-                        iconHtml = "<span style='font-size:1.1em;margin-right:2px;'>🔥</span>";
-                        value1 = `${formatStat(u.total_damage.total || 0)}`;
-                        value2 = `${Math.round(u.damagePercent)}%`;
-                    } else { // liteModeType === 'healer'
-                        barFillWidth = u.healingPercent;
-                        barFillBackground = u.total_healing && u.total_healing.total > 0 ? `linear-gradient(90deg, transparent, #28a745)` : 'none'; // Verde para healer
-                        iconHtml = "<span style='font-size:1.1em;margin-right:2px; color: #28a745; text-shadow: 0 0 2px white, 0 0 2px white, 0 0 2px white, 0 0 2px white;'>⛨</span>"; // Icono verde con contorno blanco
-                        value1 = `${formatStat((u.total_healing && u.total_healing.total) || 0)}`;
-                        value2 = `${Math.round(u.healingPercent)}%`; // Porcentaje de contribución de heal
-                    }
-
-                    return `<div class="lite-bar" data-lite="true" data-rank="${u.rank}">
-                        <div class="lite-bar-fill" style="width: ${barFillWidth}%; background: ${barFillBackground};"></div>
-                        <div class="lite-bar-content" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; justify-content: space-between;">
-                            <div class="skill-analysis-button" title="Análisis de Habilidades">
-                                <i class="fa-solid fa-chart-bar"></i>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 5px;">
-                                <img class="lite-bar-icon" src="icons/${prof.icon}" alt="icon" style="margin-left:2px; margin-right:5px;" />
-                                <span class="lite-bar-name">${nombre}</span>
-                            </div>
-                            <div class="lite-bar-values">
-                                <span class="lite-bar-damage">${value1} ${iconHtml}</span>
-                                <span class="lite-bar-percent">${value2}</span>
-                            </div>
-                        </div>
-                    </div>`;
-                }).join('');
+                renderLiteBars(container, userArray);
             } else {
-                // ...renderizado original...
-                container.innerHTML = userArray.map((u, index) => {
-                    const professionParts = u.profession.split('-');
-                    const mainProfessionKey = professionParts[0];
-                    const subProfessionKey = professionParts[1];
-                    const mainProf = professionMap[mainProfessionKey] || defaultProfession;
-                    const subProf = professionMap[subProfessionKey];
-                    let prof = subProf || mainProf;
-                    let professionName = mainProf.name;
-                    if (subProf) {
-                        professionName += ` - ${subProf.name}`;
-                    }
-                    const dps = Number(u.total_dps) || 0;
-                    const totalHealing = u.total_healing ? (Number(u.total_healing.total) || 0) : 0;
-                    const color = playerColors[index % playerColors.length];
-                    const dpsColor = dps > 0 ? `linear-gradient(90deg, transparent, ${color})` : 'none';
-                    const nombre = u.name || '';
-                    const totalHits = u.total_count.total || 0;
-                    const crit = (u.total_count.critical !== undefined && totalHits > 0) ? Math.round((u.total_count.critical / totalHits) * 100) : '0';
-                    const lucky = (u.total_count.lucky !== undefined && totalHits > 0) ? Math.round((u.total_count.lucky / totalHits) * 100) : '0';
-                    const peak = (u.realtime_dps_max !== undefined) ? u.realtime_dps_max : 0;
-                    return `<div class="player-bar" data-rank="${u.rank}">
-                        <div class="progress-fill" style="width: ${u.damagePercent}%; background: ${dpsColor}"></div>
-                        <div class="bar-content">
-                            <div class="skill-analysis-button" title="Análisis de Habilidades">
-                                <i class="fa-solid fa-chart-bar"></i>
-                            </div>
-                            <div class="column name-col">
-                                <span class="player-name">${nombre}</span>
-                                <div class="additional-stat-row" style="height: 18px; margin-top: 1px; margin-bottom: 1px;">
-                                    <span class="additional-stat-icon" style="color: #dc3545; position: absolute; left: 4px; z-index: 2;">❤</span>
-                                    <div class="hp-bar-background">
-                                        <div class="hp-bar-fill" style="width: ${((u.hp || 0) / (u.max_hp || 1)) * 100}%; background-color: ${getHealthColor(((u.hp || 0) / (u.max_hp || 1)) * 100)};"></div>
-                                    </div>
-                                    <span class="additional-stat-value" style="width: 100%; text-align: center; font-size: 0.8rem; color: white; text-shadow: 1px 1px 1px black;">${formatStat(u.hp || 0)}/${formatStat(u.max_hp || 0)}</span>
-                                </div>
-                                <span class="player-id">${professionName}</span>
-                            </div>
-                            <div class="column stats-col" style="margin-left: 40px;">
-                                <div class="stats-group">
-                                    <div class="stat-row"><span class="stat-value">${formatStat(dps)}</span><span class="stat-label">DPS</span></div>
-                                    <div class="stat-row"><span class="stat-value">${formatStat(u.total_hps || 0)}</span><span class="stat-label" style="color: #28a745;">HPS</span></div>
-                                    <div class="stat-row"><span class="stat-value">${formatStat(u.taken_damage)}</span><span class="stat-label" style="color: #ffc107;">DT</span></div>
-                                </div>
-                            </div>
-                            <div class="column icon-col" style="flex-direction: column; justify-content: center; align-items: center; text-align: center; min-width: 65px; position: relative; margin-left: -10px;">
-                                <img class="class-icon" src="icons/${prof.icon}" alt="icon" style="height: 42px; width: 42px;">
-                                <span style="font-size: 0.8rem; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.5); padding: 0 4px; border-radius: 5px; position: absolute; top: 12.5px; left: 50%; transform: translateX(-50%); text-shadow: 0 0 2px rgba(0,0,0,0.7);">${Math.round(u.damagePercent)}%</span>
-                            </div>
-                            <div class="column extra-col" style="margin-left: -10px;">
-                                <div class="stats-extra">
-                                    <div class="stat-row">
-                                        <span class="stat-label">CRIT</span>
-                                        <span class="stat-icon"> ✸</span>
-                                        <span class="stat-value">${crit}%</span>
-                                    </div>
-                                    <div class="stat-row">
-                                        <span class="stat-label">LUCK</span>
-                                        <span class="stat-icon"> ☘</span>
-                                        <span class="stat-value">${lucky}%</span>
-                                    </div>
-                                    <div class="stat-row">
-                                        <span class="stat-label">MAX</span>
-                                        <span class="stat-icon"> ⚔</span>
-                                        <span class="stat-value">${formatStat(peak)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="column additional-stats-col">
-                                <div class="additional-stats-group">
-                                    <div class="additional-stat-row">
-                                        <span class="additional-stat-icon" style="font-weight: bold;">GS</span>
-                                        <span class="additional-stat-value">${formatStat(u.fightPoint)}</span>
-                                    </div>
-                                    <div class="additional-stat-row">
-                                        <span class="additional-stat-icon">🔥</span>
-                                        <span class="additional-stat-value">${formatStat(u.total_damage.total || 0)}</span>
-                                    </div>
-                                    <div class="additional-stat-row">
-                                        <span class="additional-stat-icon" style="color: #28a745;">⛨</span>
-                                        <span class="additional-stat-value">${formatStat(u.total_healing.total || 0)}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>`;
-                }).join('');
+                renderAdvancedBars(container, userArray);
             }
         } catch (err) {
             if (container) {
@@ -596,6 +738,10 @@ const professionMap = {
     setInterval(fetchDataAndRender, 50);
     fetchDataAndRender();
     updateLogsUI();
+    updateEncountersUI();
+
+    // Refresh encounters list periodically
+    setInterval(updateEncountersUI, 10000);
 
     // Script para eliminar el texto de depuración de VSCode
     document.addEventListener('DOMContentLoaded', () => {
