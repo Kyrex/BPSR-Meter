@@ -232,6 +232,19 @@ logToFile('==== INICIO DE ELECTRON ====');
         }
     });
 
+    // Manejar el evento para activar/desactivar click-through
+    ipcMain.on('set-ignore-mouse-events', (event, ignore) => {
+        if (mainWindow) {
+            if (ignore) {
+                // Activar click-through: ignorar eventos del ratón excepto el botón
+                mainWindow.setIgnoreMouseEvents(true, { forward: true });
+            } else {
+                // Desactivar click-through: procesar eventos del ratón normalmente
+                mainWindow.setIgnoreMouseEvents(false);
+            }
+        }
+    });
+
     // Enviar el estado inicial del candado al renderizador una vez que la ventana esté lista
     mainWindow.webContents.on('did-finish-load', () => {
         mainWindow.webContents.send('lock-state-changed', isLocked);

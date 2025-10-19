@@ -6,8 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     resizeWindow: (width, height) => ipcRenderer.send('resize-window', width, height),
     toggleLockState: () => ipcRenderer.send('toggle-lock-state'),
     onLockStateChanged: (callback) => ipcRenderer.on('lock-state-changed', (event, isLocked) => callback(isLocked)),
-    allowMouseEvents: () => ipcRenderer.send('allow-mouse-events'),
-    ignoreMouseEvents: () => ipcRenderer.send('ignore-mouse-events'),
+    setIgnoreMouseEvents: (ignore) => ipcRenderer.send('set-ignore-mouse-events', ignore),
 });
 
 window.addEventListener('DOMContentLoaded', () => {

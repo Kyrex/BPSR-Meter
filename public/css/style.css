@@ -152,6 +152,15 @@ body.locked #lock-button {
     pointer-events: all; /* Permitir clics en el botón de candado incluso cuando está bloqueado */
 }
 
+body.clickthrough {
+    pointer-events: none; /* Hacer la ventana click-through */
+}
+
+body.clickthrough #clickthrough-button {
+    pointer-events: all; /* Permitir clics en el botón de click-through para poder desactivarlo */
+    cursor: pointer; /* Asegurar que el cursor se muestre sobre el botón */
+}
+
 .container {
     width: 100%;
     max-width: 800px;
@@ -539,6 +548,21 @@ input[type="text"] {
 }
 #close-button:hover {
     background-color: rgba(220, 53, 69, 0.7);
+}
+
+#clickthrough-button {
+    background-color: rgba(128, 128, 128, 0.5); /* Gris */
+    border: 1px solid rgba(128, 128, 128, 0.7);
+}
+#clickthrough-button:hover {
+    background-color: rgba(128, 128, 128, 0.7);
+}
+#clickthrough-button.active {
+    background-color: rgba(75, 192, 192, 0.5); /* Verde azulado cuando activo */
+    border: 1px solid rgba(75, 192, 192, 0.7);
+}
+#clickthrough-button.active:hover {
+    background-color: rgba(75, 192, 192, 0.7);
 }
 
 .sync-button {

@@ -24,7 +24,6 @@
   "license": "AGPL-3.0",
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
-    "cap": "^0.2.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "google-protobuf": "^4.0.0",
@@ -32,6 +31,9 @@
     "protobufjs": "^7.5.4",
     "socket.io": "^4.8.1",
     "winston": "^3.17.0"
+  },
+  "optionalDependencies": {
+    "cap": "^0.2.1"
   },
   "devDependencies": {
     "@yao-pkg/pkg": "^6.6.0",
