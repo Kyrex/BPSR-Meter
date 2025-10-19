@@ -5,6 +5,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 const fsPromises = require('fs').promises;
 const fs = require('fs');
+const supabase = require('./supabaseClient');
 
 const SETTINGS_PATH = path.join('./settings.json');
 const LOGS_DPS_PATH = path.join('./logs_dps.json');
@@ -40,13 +41,47 @@ function initializeApi(app, server, io, userDataManager, logger, globalSettings)
         res.json(data);
     });
 
-    app.get('/api/clear', (req, res) => {
-        userDataManager.clearAll(globalSettings); // Pasar globalSettings
-        console.log('¡Estadísticas limpiadas!');
-        res.json({
-            code: 0,
-            msg: '¡Estadísticas limpiadas!',
-        });
+    app.get('/api/clear', async (req, res) => {
+        try {
+            // Save current encounter to database before clearing
+            const userData = userDataManager.getAllUsersData();
+            const userArray = Object.values(userData).filter(u => u.total_damage && u.total_damage.total > 0);
+
+            if (userArray.length > 0) {
+                const totalDamage = userArray.reduce((acc, u) => acc + (u.total_damage?.total || 0), 0);
+                const timestamp = userDataManager.startTime;
+                const durationMs = Date.now() - timestamp;
+
+                const { error } = await supabase
+                    .from('encounters')
+                    .insert({
+                        timestamp: timestamp,
+                        date: new Date(timestamp).toISOString(),
+                        duration_ms: durationMs,
+                        total_damage: totalDamage,
+                        player_count: userArray.length,
+                        data: userData
+                    });
+
+                if (error) {
+                    logger.error('Failed to save encounter:', error);
+                }
+            }
+
+            userDataManager.clearAll(globalSettings);
+            console.log('¡Estadísticas limpiadas!');
+            res.json({
+                code: 0,
+                msg: '¡Estadísticas limpiadas!',
+            });
+        } catch (error) {
+            logger.error('Error in /api/clear:', error);
+            userDataManager.clearAll(globalSettings);
+            res.json({
+                code: 0,
+                msg: '¡Estadísticas limpiadas!',
+            });
+        }
     });
 
     app.post('/api/clear-logs', async (req, res) => {
@@ -304,6 +339,53 @@ function initializeApi(app, server, io, userDataManager, logger, globalSettings)
             logs = JSON.parse(fs.readFileSync(LOGS_DPS_PATH, 'utf8'));
         }
         res.json(logs);
+    });
+
+    // Get list of saved encounters
+    app.get('/api/encounters', async (req, res) => {
+        try {
+            const { data, error } = await supabase
+                .from('encounters')
+                .select('id, timestamp, date, duration_ms, total_damage, player_count')
+                .order('timestamp', { ascending: false })
+                .limit(50);
+
+            if (error) {
+                logger.error('Failed to fetch encounters:', error);
+                return res.status(500).json({ code: 1, msg: 'Failed to fetch encounters' });
+            }
+
+            res.json({ code: 0, data: data || [] });
+        } catch (error) {
+            logger.error('Error in /api/encounters:', error);
+            res.status(500).json({ code: 1, msg: 'Internal server error' });
+        }
+    });
+
+    // Get specific encounter data
+    app.get('/api/encounters/:id', async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { data, error } = await supabase
+                .from('encounters')
+                .select('*')
+                .eq('id', id)
+                .maybeSingle();
+
+            if (error) {
+                logger.error('Failed to fetch encounter:', error);
+                return res.status(500).json({ code: 1, msg: 'Failed to fetch encounter' });
+            }
+
+            if (!data) {
+                return res.status(404).json({ code: 1, msg: 'Encounter not found' });
+            }
+
+            res.json({ code: 0, encounter: data });
+        } catch (error) {
+            logger.error('Error in /api/encounters/:id:', error);
+            res.status(500).json({ code: 1, msg: 'Internal server error' });
+        }
     });
 
     io.on('connection', (socket) => {

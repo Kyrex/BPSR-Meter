@@ -24,6 +24,7 @@
   "license": "AGPL-3.0",
   "packageManager": "pnpm@10.13.1",
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
     "cors": "^2.8.5",
     "electron-rebuild": "^3.2.9",
     "express": "^5.1.0",
