@@ -1,38 +1,38 @@
-const Database = require('better-sqlite3');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 class EncountersDB {
-    constructor(dbPath = './encounters.db') {
-        this.dbPath = dbPath;
-        this.db = null;
+    constructor(filePath = './encounters.json') {
+        this.filePath = filePath;
         this.initialize();
     }
 
     initialize() {
         try {
-            this.db = new Database(this.dbPath);
-            this.db.pragma('journal_mode = WAL');
-
-            this.db.exec(`
-                CREATE TABLE IF NOT EXISTS encounters (
-                    id TEXT PRIMARY KEY,
-                    timestamp INTEGER NOT NULL,
-                    date TEXT NOT NULL,
-                    duration_ms INTEGER,
-                    total_damage INTEGER,
-                    player_count INTEGER,
-                    data TEXT NOT NULL,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                );
-
-                CREATE INDEX IF NOT EXISTS idx_encounters_timestamp ON encounters(timestamp DESC);
-            `);
-
-            console.log('SQLite database initialized successfully');
+            if (!fs.existsSync(this.filePath)) {
+                fs.writeFileSync(this.filePath, JSON.stringify({ encounters: [] }, null, 2));
+                console.log('Encounters JSON file created');
+            }
         } catch (error) {
-            console.error('Failed to initialize SQLite database:', error);
-            throw error;
+            console.error('Failed to initialize encounters file:', error);
+        }
+    }
+
+    readEncounters() {
+        try {
+            const data = fs.readFileSync(this.filePath, 'utf8');
+            return JSON.parse(data);
+        } catch (error) {
+            console.error('Failed to read encounters:', error);
+            return { encounters: [] };
+        }
+    }
+
+    writeEncounters(data) {
+        try {
+            fs.writeFileSync(this.filePath, JSON.stringify(data, null, 2));
+        } catch (error) {
+            console.error('Failed to write encounters:', error);
         }
     }
 
@@ -42,21 +42,22 @@ class EncountersDB {
 
     insertEncounter(encounter) {
         try {
-            const stmt = this.db.prepare(`
-                INSERT INTO encounters (id, timestamp, date, duration_ms, total_damage, player_count, data)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            `);
-
+            const data = this.readEncounters();
             const id = this.generateId();
-            const result = stmt.run(
+
+            const newEncounter = {
                 id,
-                encounter.timestamp,
-                encounter.date,
-                encounter.duration_ms,
-                encounter.total_damage,
-                encounter.player_count,
-                JSON.stringify(encounter.data)
-            );
+                timestamp: encounter.timestamp,
+                date: encounter.date,
+                duration_ms: encounter.duration_ms,
+                total_damage: encounter.total_damage,
+                player_count: encounter.player_count,
+                data: encounter.data,
+                created_at: new Date().toISOString()
+            };
+
+            data.encounters.unshift(newEncounter);
+            this.writeEncounters(data);
 
             return { success: true, id };
         } catch (error) {
@@ -67,14 +68,15 @@ class EncountersDB {
 
     getEncounters(limit = 50) {
         try {
-            const stmt = this.db.prepare(`
-                SELECT id, timestamp, date, duration_ms, total_damage, player_count
-                FROM encounters
-                ORDER BY timestamp DESC
-                LIMIT ?
-            `);
-
-            return stmt.all(limit);
+            const data = this.readEncounters();
+            return data.encounters.slice(0, limit).map(e => ({
+                id: e.id,
+                timestamp: e.timestamp,
+                date: e.date,
+                duration_ms: e.duration_ms,
+                total_damage: e.total_damage,
+                player_count: e.player_count
+            }));
         } catch (error) {
             console.error('Failed to get encounters:', error);
             return [];
@@ -83,17 +85,8 @@ class EncountersDB {
 
     getEncounterById(id) {
         try {
-            const stmt = this.db.prepare(`
-                SELECT *
-                FROM encounters
-                WHERE id = ?
-            `);
-
-            const row = stmt.get(id);
-            if (row) {
-                row.data = JSON.parse(row.data);
-            }
-            return row;
+            const data = this.readEncounters();
+            return data.encounters.find(e => e.id === id) || null;
         } catch (error) {
             console.error('Failed to get encounter by id:', error);
             return null;
@@ -102,17 +95,13 @@ class EncountersDB {
 
     deleteOldEncounters(keepCount = 100) {
         try {
-            const stmt = this.db.prepare(`
-                DELETE FROM encounters
-                WHERE id NOT IN (
-                    SELECT id FROM encounters
-                    ORDER BY timestamp DESC
-                    LIMIT ?
-                )
-            `);
+            const data = this.readEncounters();
+            const beforeCount = data.encounters.length;
+            data.encounters = data.encounters.slice(0, keepCount);
+            this.writeEncounters(data);
 
-            const result = stmt.run(keepCount);
-            return { success: true, deleted: result.changes };
+            const deleted = beforeCount - data.encounters.length;
+            return { success: true, deleted };
         } catch (error) {
             console.error('Failed to delete old encounters:', error);
             return { success: false, error: error.message };
@@ -120,9 +109,7 @@ class EncountersDB {
     }
 
     close() {
-        if (this.db) {
-            this.db.close();
-        }
+        // No-op for JSON file
     }
 }
 
