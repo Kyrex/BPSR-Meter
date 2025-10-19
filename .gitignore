@@ -14,3 +14,4 @@ dist/logs/
 /Prerequisites/npcap-1.83.exe
 pnpm-lock.yaml
 server - copia - copia.js
+.env
