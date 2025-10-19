@@ -35,8 +35,6 @@
         <button class="control-button advanced-lite-btn" id="lite-dps-healer-btn" style="display:none;">DPS</button>
             <!-- Botón de bloqueo/desbloqueo -->
             <button class="control-button" id="lock-button" title="Bloquear posición" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-lock-open"></i></button>
-            <!-- Botón de click-through -->
-            <button class="control-button" id="clickthrough-button" title="Activar click-through" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-hand-pointer"></i></button>
             <button class="control-button" id="close-button" title="Cerrar ventana" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-xmark"></i></button>
         </header>
         <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
@@ -48,6 +46,9 @@
             <i class="fa-solid fa-spinner fa-spin"></i>
         </div>
         <main id="player-bars-container" style="margin-top: 40px; border: 1px solid rgba(255, 255, 255, 0.1); display: none;"></main>
+        <div class="resize-handle" id="resize-handle" title="Arrastrar para redimensionar">
+            <i class="fa-solid fa-grip-lines"></i>
+        </div>
     </div>
 
     <script src="js/main.js"></script>

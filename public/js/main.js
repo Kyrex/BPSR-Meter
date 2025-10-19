@@ -53,11 +53,9 @@ const professionMap = {
     const syncIcon = document.querySelector('#sync-button .sync-icon');
     const syncTimerSpan = document.querySelector('#sync-button .sync-timer');
     const lockButton = document.getElementById('lock-button');
-    const clickthroughButton = document.getElementById('clickthrough-button');
     const logsSection = document.getElementById('logs-section'); // Declarar logsSection aquí
     const encountersSection = document.getElementById('encounters-section'); // Sección de encuentros guardados
     const loadingIndicator = document.getElementById('loading-indicator'); // Indicador de carga
-    let isClickthrough = false; // Estado de click-through
     let currentEncounterId = null; // ID del encuentro actualmente cargado
     let isViewingHistory = false; // Si estamos viendo un encuentro histórico
 
@@ -161,18 +159,32 @@ const professionMap = {
             });
         }
 
-        if (clickthroughButton) {
-            clickthroughButton.addEventListener('click', () => {
-                isClickthrough = !isClickthrough;
-                document.body.classList.toggle('clickthrough', isClickthrough);
-                clickthroughButton.classList.toggle('active', isClickthrough);
-                clickthroughButton.title = isClickthrough ? 'Desactivar click-through' : 'Activar click-through';
-                clickthroughButton.innerHTML = isClickthrough ? '<i class="fa-solid fa-hand"></i>' : '<i class="fa-solid fa-hand-pointer"></i>';
-                if (window.electronAPI) {
-                    window.electronAPI.setIgnoreMouseEvents(isClickthrough);
-                }
+        // Resize handle functionality
+        const resizeHandle = document.getElementById('resize-handle');
+        if (resizeHandle && window.electronAPI) {
+            let isResizing = false;
+            let startY = 0;
+            let startHeight = 0;
+
+            resizeHandle.addEventListener('mousedown', (e) => {
+                isResizing = true;
+                startY = e.clientY;
+                startHeight = window.innerHeight;
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                const deltaY = e.clientY - startY;
+                const newHeight = Math.max(200, startHeight + deltaY);
+                window.electronAPI.resizeWindow(650, newHeight);
+            });
+
+            document.addEventListener('mouseup', () => {
+                isResizing = false;
             });
         }
+
     });
 
     function applyZoom() {

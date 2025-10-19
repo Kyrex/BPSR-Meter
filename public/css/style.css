@@ -736,3 +736,33 @@ input[type="text"] {
 .lite-bar .lite-bar-content {
     padding-left: 38px; /* Ajustar para dejar espacio al botón (ancho del botón + margen) */
 }
+
+/* Resize Handle */
+.resize-handle {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: ns-resize;
+    background: rgba(255, 255, 255, 0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    transition: background 0.2s;
+    z-index: 1000;
+}
+
+.resize-handle:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.resize-handle i {
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.9rem;
+}
+
+body.locked .resize-handle {
+    display: none;
+}
