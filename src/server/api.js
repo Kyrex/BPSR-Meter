@@ -5,10 +5,12 @@ const { Server } = require('socket.io');
 const path = require('path');
 const fsPromises = require('fs').promises;
 const fs = require('fs');
-const supabase = require('./supabaseClient');
+const EncountersDB = require('./database');
 
 const SETTINGS_PATH = path.join('./settings.json');
 const LOGS_DPS_PATH = path.join('./logs_dps.json');
+
+const encountersDB = new EncountersDB();
 
 function initializeApi(app, server, io, userDataManager, logger, globalSettings) {
     app.use(cors());
@@ -52,20 +54,21 @@ function initializeApi(app, server, io, userDataManager, logger, globalSettings)
                 const timestamp = userDataManager.startTime;
                 const durationMs = Date.now() - timestamp;
 
-                const { error } = await supabase
-                    .from('encounters')
-                    .insert({
-                        timestamp: timestamp,
-                        date: new Date(timestamp).toISOString(),
-                        duration_ms: durationMs,
-                        total_damage: totalDamage,
-                        player_count: userArray.length,
-                        data: userData
-                    });
+                const result = encountersDB.insertEncounter({
+                    timestamp: timestamp,
+                    date: new Date(timestamp).toISOString(),
+                    duration_ms: durationMs,
+                    total_damage: totalDamage,
+                    player_count: userArray.length,
+                    data: userData
+                });
 
-                if (error) {
-                    logger.error('Failed to save encounter:', error);
+                if (!result.success) {
+                    logger.error('Failed to save encounter:', result.error);
                 }
+
+                // Clean up old encounters, keep last 100
+                encountersDB.deleteOldEncounters(100);
             }
 
             userDataManager.clearAll(globalSettings);
@@ -344,18 +347,8 @@ function initializeApi(app, server, io, userDataManager, logger, globalSettings)
     // Get list of saved encounters
     app.get('/api/encounters', async (req, res) => {
         try {
-            const { data, error } = await supabase
-                .from('encounters')
-                .select('id, timestamp, date, duration_ms, total_damage, player_count')
-                .order('timestamp', { ascending: false })
-                .limit(50);
-
-            if (error) {
-                logger.error('Failed to fetch encounters:', error);
-                return res.status(500).json({ code: 1, msg: 'Failed to fetch encounters' });
-            }
-
-            res.json({ code: 0, data: data || [] });
+            const encounters = encountersDB.getEncounters(50);
+            res.json({ code: 0, data: encounters });
         } catch (error) {
             logger.error('Error in /api/encounters:', error);
             res.status(500).json({ code: 1, msg: 'Internal server error' });
@@ -366,22 +359,13 @@ function initializeApi(app, server, io, userDataManager, logger, globalSettings)
     app.get('/api/encounters/:id', async (req, res) => {
         try {
             const { id } = req.params;
-            const { data, error } = await supabase
-                .from('encounters')
-                .select('*')
-                .eq('id', id)
-                .maybeSingle();
+            const encounter = encountersDB.getEncounterById(id);
 
-            if (error) {
-                logger.error('Failed to fetch encounter:', error);
-                return res.status(500).json({ code: 1, msg: 'Failed to fetch encounter' });
-            }
-
-            if (!data) {
+            if (!encounter) {
                 return res.status(404).json({ code: 1, msg: 'Encounter not found' });
             }
 
-            res.json({ code: 0, encounter: data });
+            res.json({ code: 0, encounter: encounter });
         } catch (error) {
             logger.error('Error in /api/encounters/:id:', error);
             res.status(500).json({ code: 1, msg: 'Internal server error' });
