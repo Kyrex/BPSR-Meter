@@ -694,6 +694,7 @@ const professionMap = {
                 loadingIndicator.style.display = 'flex'; // Mostrar el indicador de carga
                 playerBarsContainer.style.display = 'none'; // Ocultar el contenedor de barras
                 updateSyncButtonState();
+                updateEncountersUI();
                 return;
             }
 
@@ -761,9 +762,6 @@ const professionMap = {
     fetchDataAndRender();
     updateLogsUI();
     updateEncountersUI();
-
-    // Refresh encounters list periodically
-    setInterval(updateEncountersUI, 10000);
 
     // Script para eliminar el texto de depuración de VSCode
     document.addEventListener('DOMContentLoaded', () => {

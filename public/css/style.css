@@ -1,3 +1,7 @@
+body{
+    background-color: #111 !important;
+}
+
 /* Botón Advanced/Lite: rectangular y alargado */
 .advanced-lite-btn {
     border-radius: 18px !important;
