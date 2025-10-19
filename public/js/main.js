@@ -163,26 +163,37 @@ const professionMap = {
         const resizeHandle = document.getElementById('resize-handle');
         if (resizeHandle && window.electronAPI) {
             let isResizing = false;
-            let startY = 0;
-            let startHeight = 0;
+            let startMouseY = 0;
+            let startWindowHeight = 0;
 
-            resizeHandle.addEventListener('mousedown', (e) => {
+            const startResize = (e) => {
                 isResizing = true;
-                startY = e.clientY;
-                startHeight = window.innerHeight;
+                startMouseY = e.pageY;
+                startWindowHeight = window.innerHeight;
+                document.body.style.userSelect = 'none';
+                document.body.style.cursor = 'ns-resize';
                 e.preventDefault();
-            });
+                e.stopPropagation();
+            };
 
-            document.addEventListener('mousemove', (e) => {
+            const doResize = (e) => {
                 if (!isResizing) return;
-                const deltaY = e.clientY - startY;
-                const newHeight = Math.max(200, startHeight + deltaY);
-                window.electronAPI.resizeWindow(650, newHeight);
-            });
+                const deltaY = e.pageY - startMouseY;
+                const newHeight = Math.max(200, Math.min(2000, startWindowHeight + deltaY));
+                window.electronAPI.resizeWindow(650, Math.round(newHeight));
+            };
 
-            document.addEventListener('mouseup', () => {
-                isResizing = false;
-            });
+            const stopResize = () => {
+                if (isResizing) {
+                    isResizing = false;
+                    document.body.style.userSelect = '';
+                    document.body.style.cursor = '';
+                }
+            };
+
+            resizeHandle.addEventListener('mousedown', startResize);
+            window.addEventListener('mousemove', doResize);
+            window.addEventListener('mouseup', stopResize);
         }
 
     });
@@ -401,11 +412,7 @@ const professionMap = {
     }
 
     function renderEncounters(encounters) {
-        if (!isViewingHistory && encounters.length === 0) {
-            encountersSection.style.display = 'none';
-            return;
-        }
-
+        console.log('Rendering encounters dropdown with', encounters.length, 'encounters');
         encountersSection.style.display = 'block';
         let html = '<select id="encounters-dropdown" style="width:100%;padding:6px 4px;border-radius:6px;font-size:1rem;background:rgba(0,0,0,0.3);color:var(--text-primary);border:1px solid rgba(255, 255, 255, 0.2);">';
         html += '<option value="">Live DPS</option>';
@@ -420,6 +427,7 @@ const professionMap = {
 
         html += '</select>';
         encountersSection.innerHTML = html;
+        console.log('Encounters dropdown HTML updated');
 
         const dropdown = document.getElementById('encounters-dropdown');
         dropdown.onchange = async function() {
@@ -487,7 +495,9 @@ const professionMap = {
     }
 
     async function updateEncountersUI() {
+        console.log('Updating encounters UI...');
         const encounters = await fetchEncounters();
+        console.log(`Fetched ${encounters.length} encounters`);
         renderEncounters(encounters);
     }
 
