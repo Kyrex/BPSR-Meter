@@ -15,3 +15,5 @@ dist/logs/
 pnpm-lock.yaml
 server - copia - copia.js
 .env
+
+/algo
