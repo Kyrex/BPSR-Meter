@@ -1,5 +1,5 @@
 // Estado global para modo Lite
-let isLiteMode = false;
+let isLiteMode = true;
 let liteModeType = 'dps'; // 'dps' o 'healer'
 
 let empty = false;
@@ -10,35 +10,36 @@ let logs = new Array();
 
 const professionMap = {
     // Clases Principales
-    '雷影剑士': { name: 'Stormblade', icon: 'Stormblade.png', role: 'dps' },
-    '冰魔导师': { name: 'Frost Mage', icon: 'Frost Mage.png', role: 'dps' },
-    '涤罪恶火·战斧': { name: 'Fire Axe', icon: 'Fire Axe.png', role: 'dps' },
-    '青岚骑士': { name: 'Wind Knight', icon: 'Wind Knight.png', role: 'tank' },
-    '森语者': { name: 'Verdant Oracle', icon: 'Verdant Oracle.png', role: 'dps' },
+    '雷影剑士': { name: 'Stormblade', icon: 'class_stormblade.webp', role: 'dps' },
+    '冰魔导师': { name: 'Frost Mage', icon: 'class_frost_mage.webp', role: 'dps' },
+    '青岚骑士': { name: 'Wind Knight', icon: 'class_wind_knight.webp', role: 'tank' },
+    '森语者': { name: 'Verdant Oracle', icon: 'class_verdant_oracle.webp', role: 'dps' },
+    '巨刃守护者': { name: 'Heavy Guardian', icon: 'class_heavy_guardian.webp', role: 'tank' },
+    '神射手': { name: 'Marksman', icon: 'class_marksman.webp', role: 'dps' },
+    '神盾骑士': { name: 'Shield Knight', icon: 'class_shield_knight.webp', role: 'tank' },
+    '灵魂乐手': { name: 'Soul Musician', icon: 'class_soul_musician.webp', role: 'dps' },
+    '涤罪恶火·战斧': { name: 'Fire Axe', icon: 'Fire Assxe.webp', role: 'dps' },
+    
     '雷霆一闪·手炮': { name: 'Gunner', icon: 'desconocido.png', role: 'dps' },
-    '巨刃守护者': { name: 'Heavy Guardian', icon: 'baluarte_ferreo.png', role: 'tank' },
     '暗灵祈舞·仪刀/仪仗': { name: 'Spirit Dancer', icon: 'desconocido.png', role: 'dps' },
-    '神射手': { name: 'Marksman', icon: 'arco_halcon.png', role: 'dps' },
-    '神盾骑士': { name: 'Shield Knight', icon: 'guardian.png', role: 'tank' },
-    '灵魂乐手': { name: 'Soul Musician', icon: 'sonido_feroz.png', role: 'dps' },
 
     // Especializaciones
-    '居合': { name: 'laido Slash', icon: 'Stormblade.png', role: 'dps' },
-    '月刃': { name: 'MoonStrike', icon: 'MoonStrike.png', role: 'dps' },
-    '冰矛': { name: 'Icicle', icon: 'lanza_hielo.png', role: 'dps' },
-    '射线': { name: 'Frostbeam', icon: 'Frost Mage.png', role: 'dps' },
-    '防盾': { name: 'Vanguard', icon: 'guardian.png', role: 'tank' },
-    '岩盾': { name: 'Skyward', icon: 'Fire Axe.png', role: 'tank' },
-    '惩戒': { name: 'Smite', icon: 'castigo.png', role: 'dps' },
-    '愈合': { name: 'Lifebind', icon: 'Verdant Oracle.png', role: 'healer' },
-    '格挡': { name: 'Block', icon: 'guardian.png', role: 'tank' },
-    '狼弓': { name: 'Wildpack', icon: 'arco_lobo.png', role: 'dps' },
-    '鹰弓': { name: 'Falconry', icon: 'arco_halcon.png', role: 'dps' },
-    '光盾': { name: 'Shield', icon: 'egida_luz.png', role: 'tank' },
-    '协奏': { name: 'Concerto', icon: 'Concierto.png', role: 'dps' },
-    '狂音': { name: 'Dissonance', icon: 'sonido_feroz.png', role: 'dps' },
-    '空枪': { name: 'Empty Gun', icon: 'francotirador.png', role: 'dps' },
-    '重装': { name: 'Heavy Armor', icon: 'Wind Knight.png', role: 'dps' },
+    '居合': { name: 'laido Slash', icon: 'class_stormblade.webp', role: 'dps' },
+    '月刃': { name: 'MoonStrike', icon: 'class_stormblade.webp', role: 'dps' },
+    '冰矛': { name: 'Icicle', icon: 'class_frost_mage.webp', role: 'dps' },
+    '射线': { name: 'Frostbeam', icon: 'class_frost_mage.webp', role: 'dps' },
+    '防盾': { name: 'Vanguard', icon: 'class_shield_knight.webp', role: 'tank' },
+    '岩盾': { name: 'Skyward', icon: 'Fire Assxe.webp', role: 'tank' },
+    '惩戒': { name: 'Smite', icon: 'class_verdant_oracle.webp', role: 'dps' },
+    '愈合': { name: 'Lifebind', icon: 'class_verdant_oracle.webp', role: 'healer' },
+    '格挡': { name: 'Block', icon: 'class_shield_knight.webp', role: 'tank' },
+    '狼弓': { name: 'Wildpack', icon: 'class_marksman.webp', role: 'dps' },
+    '鹰弓': { name: 'Falconry', icon: 'class_marksman.webp', role: 'dps' },
+    '光盾': { name: 'Shield', icon: 'class_shield_knight.webp', role: 'tank' },
+    '协奏': { name: 'Concerto', icon: 'class_soul_musician.webp', role: 'dps' },
+    '狂音': { name: 'Dissonance', icon: 'class_soul_musician.webp', role: 'dps' },
+    '空枪': { name: 'Empty Gun', icon: 'class_wind_knight.webp', role: 'dps' },
+    '重装': { name: 'Heavy Armor', icon: 'class_wind_knight.webp', role: 'dps' },
 
 };
 
@@ -468,7 +469,7 @@ const professionMap = {
         const timestamp = startTime;
         const durationMs = Date.now() - timestamp;
         
-        logs.push({
+        logs.unshift({
             id: id,
             timestamp: timestamp,
             date: new Date(timestamp).toISOString(),
@@ -477,7 +478,7 @@ const professionMap = {
             player_count: userArray.length,
             data: userArray
         });
-        logs = logs.slice(-5);
+        logs = logs.slice(0, 5);
     }
 
     function renderHistoricalData(userData) {
@@ -552,56 +553,77 @@ const professionMap = {
     }
 
     const playerColors = [
-        'rgba(255, 99, 132, 0.7)', // Rojo
-        'rgba(54, 162, 235, 0.7)', // Azul
-        'rgba(255, 206, 86, 0.7)', // Amarillo
-        'rgba(75, 192, 192, 0.7)', // Verde
-        'rgba(153, 102, 255, 0.7)', // Morado
-        'rgba(255, 159, 64, 0.7)' // Naranja
+        'rgba(255, 99, 132, 0.5)', // Rojo
+        'rgba(54, 162, 235, 0.5)', // Azul
+        'rgba(255, 206, 86, 0.5)', // Amarillo
+        'rgba(75, 192, 192, 0.5)', // Verde
+        'rgba(153, 102, 255, 0.5)', // Morado
+        'rgba(255, 159, 64, 0.5)' // Naranja
     ];
 
     function renderLiteBars(container, userArray) {
         container.innerHTML = userArray.map((u, index) => {
+            const dps = Number(u.total_dps) || 0;
             const professionParts = u.profession.split('-');
             const mainProfessionKey = professionParts[0];
             const subProfessionKey = professionParts[1];
             const mainProf = professionMap[mainProfessionKey] || defaultProfession;
             const subProf = professionMap[subProfessionKey];
             let prof = subProf || mainProf;
-            const nombre = u.name || '';
-            const color = playerColors[index % playerColors.length];
-            let barFillWidth, barFillBackground, value1, value2, iconHtml;
+            const userName = u.name || '';
+            const bgColor = playerColors[index % playerColors.length];
+            const mgColor = bgColor.replace('0.5', '1');
+            let barFillWidth, barFillBackground, value1, value2, value3, iconHtml;
 
             if (liteModeType === 'dps') {
                 barFillWidth = u.damagePercent;
-                barFillBackground = u.total_dps > 0 ? `linear-gradient(90deg, transparent, ${color})` : 'none';
+                barFillBackground = u.total_dps > 0 ? `linear-gradient(0, ${bgColor}, transparent)` : 'none';
                 iconHtml = "<span style='font-size:1.1em;margin-right:2px;'>🔥</span>";
                 value1 = `${formatStat(u.total_damage.total || 0)}`;
                 value2 = `${Math.round(u.damagePercent)}%`;
+                value3 = `${formatStat(dps)}/s`;
             } else {
                 barFillWidth = u.healingPercent;
-                barFillBackground = u.total_healing && u.total_healing.total > 0 ? `linear-gradient(90deg, transparent, #28a745)` : 'none';
+                barFillBackground = u.total_healing && u.total_healing.total > 0 ? `linear-gradient(180deg, transparent, #28a745)` : 'none';
                 iconHtml = "<span style='font-size:1.1em;margin-right:2px; color: #28a745; text-shadow: 0 0 2px white, 0 0 2px white, 0 0 2px white, 0 0 2px white;'>⛨</span>";
                 value1 = `${formatStat((u.total_healing && u.total_healing.total) || 0)}`;
                 value2 = `${Math.round(u.healingPercent)}%`;
+                value3 = `${formatStat(dps)}/s`;
             }
 
-            return `<div class="lite-bar" data-lite="true" data-rank="${u.rank}">
-                <div class="lite-bar-fill" style="width: ${barFillWidth}%; background: ${barFillBackground};"></div>
-                <div class="lite-bar-content" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; justify-content: space-between;">
-                    <div class="skill-analysis-button" title="Análisis de Habilidades">
-                        <i class="fa-solid fa-chart-bar"></i>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <img class="lite-bar-icon" src="icons/${prof.icon}" alt="icon" style="margin-left:2px; margin-right:5px;" />
-                        <span class="lite-bar-name">${nombre}</span>
-                    </div>
-                    <div class="lite-bar-values">
-                        <span class="lite-bar-damage">${value1} ${iconHtml}</span>
-                        <span class="lite-bar-percent">${value2}</span>
+            return `
+                <div class="lite-bar" data-lite="true"">
+                    <div class="lite-bar-fill" style="width: ${barFillWidth}%; background: ${barFillBackground}; border-bottom: 2px solid ${mgColor}"></div>
+                    <div class="lite-bar-content" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; justify-content: space-between;">
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <img class="lite-bar-icon" src="icons/${prof.icon}" alt="icon" style="margin-left:2px; margin-right:5px;" />
+                            <span class="lite-bar-name">${userName}</span>
+                        </div>
+                        <div class="lite-bar-values">
+                            <span>${value1}</span>
+                            <span>${value3}</span>
+                            <span>${value2}</span>
+                        </div>
                     </div>
                 </div>
-            </div>`;
+                
+                <!--div class="lite-bar" data-lite="true" data-rank="${u.rank}">
+                    <div class="lite-bar-fill" style="width: ${barFillWidth}%; background: ${barFillBackground};"></div>
+                    <div class="lite-bar-content" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; justify-content: space-between;">
+                        <div class="skill-analysis-button" title="Análisis de Habilidades">
+                            <i class="fa-solid fa-chart-bar"></i>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 5px;">
+                            <img class="lite-bar-icon" src="icons/${prof.icon}" alt="icon" style="margin-left:2px; margin-right:5px;" />
+                            <span class="lite-bar-name">${userName}</span>
+                        </div>
+                        <div class="lite-bar-values">
+                            <span class="lite-bar-damage">${value1} ${iconHtml}</span>
+                            <span class="lite-bar-percent">${value2}</span>
+                        </div>
+                    </div>
+                </div-->
+            `;            
         }).join('');
     }
 

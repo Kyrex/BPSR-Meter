@@ -28,26 +28,24 @@
 }
 /* Barras Lite: 50% más altas, la mitad de largas, barra igual que Advanced */
 .lite-bar {
-    background: var(--bar-bg-color);
-    border-radius: 18px;
-    height: 31px; /* 30% más baja (44px * 0.70 = 30.8px) */
+    height: 32px; /* 30% más baja (44px * 0.70 = 30.8px) */
     min-height: 31px;
     max-height: 31px;
-    margin-bottom: 4px;
-    width: 60%; /* 10% más larga que antes */
+    width: 70%; /* 10% más larga que antes */
     min-width: 0;
-    max-width: 60%;
+    max-width: 70%;
     position: relative;
     overflow: hidden;
     display: flex;
     align-items: center;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.10);
-    border: 1px solid rgba(255,255,255,0.08);
 }
 .lite-bar-fill {
     position: absolute;
-    left: 0; top: 0; height: 100%; border-radius: 18px;
+    left: 0; 
+    top: 0; 
+    height: 100%;
     transition: width 0.4s;
+    border-bottom: 2px solid red;
     z-index: 1;
 }
 .lite-bar-content {
@@ -631,7 +629,7 @@ input[type="text"] {
 .timer-btn i {
     margin-right: 5px;
 }
-#player-bars-container { display: flex; flex-direction: column; gap: 8px; }
+#player-bars-container { display: flex; flex-direction: column; }
 .player-bar { background-color: var(--bar-bg-color); border-radius: 8px; height: 55px; position: relative; overflow: hidden; }
 .progress-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 8px; transition: width 0.4s ease-out; z-index: 1; }
 .player-bar[data-rank="1"] .progress-fill { background-color: var(--rank-1-color); }
@@ -734,7 +732,7 @@ input[type="text"] {
 }
 
 .lite-bar .lite-bar-content {
-    padding-left: 38px; /* Ajustar para dejar espacio al botón (ancho del botón + margen) */
+    padding-left: 8px; /* Ajustar para dejar espacio al botón (ancho del botón + margen) */
 }
 
 /* Resize Handle */
