@@ -96,7 +96,7 @@ logToFile('==== INICIO DE ELECTRON ====');
             transparent: true,
             frame: false,
             alwaysOnTop: true,
-            resizable: false,
+            resizable: true,
             webPreferences: {
                 preload: path.join(__dirname, 'preload.js'),
                 nodeIntegration: false,
@@ -214,6 +214,7 @@ logToFile('==== INICIO DE ELECTRON ====');
     // Manejar el evento para redimensionar la ventana
     ipcMain.on('resize-window', (event, width, height) => {
         if (mainWindow) {
+            mainWindow.setMinimumSize(0, 0);
             mainWindow.setSize(width, height);
         }
     });

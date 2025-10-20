@@ -244,7 +244,7 @@ const professionMap = {
         const finalWidth = Math.round(baseWidth * currentZoom);
         const finalHeight = Math.round(totalContentHeightUnscaled * currentZoom);
         
-        window.electronAPI.resizeWindow(finalWidth, finalHeight);
+        // window.electronAPI.resizeWindow(finalWidth, finalHeight);
     }
 
     function resetDpsMeter() {
