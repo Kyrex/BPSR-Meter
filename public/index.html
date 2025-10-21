@@ -12,41 +12,31 @@
 </head>
 <body>
 <div class="dps-meter">
-        <header class="controls" style="width: 100%;">
-            <div style="position: relative; width: 32px; height: 32px; margin-right: 10px;"> <!-- Contenedor para el icono y el botón de sincronización -->
+        <header id="header" class="controls" style="width: 100%;">
+            <div style="position: relative; width: 32px; height: 32px; margin-right: 8px">
                 <img src="icon.png" alt="Logo" style="height: 32px; position: absolute; top: 0; left: 0;">
-                <div class="sync-button" id="sync-button" style="position: absolute; top: 1.5px; left: 1.5px; z-index: 11;"> <!-- Centrado sobre el icono -->
+                <div class="sync-button" id="sync-button" style="position: absolute; top: 1.5px; left: 1.5px; z-index: 11;">
                     <i class="fa-solid fa-arrows-rotate sync-icon"></i>
                     <span class="sync-timer"></span>
                 </div>
+                <div id="drag-indicator" class="drag-indicator"></div>
             </div>
-            <button class="control-button" id="reset-button" title="Reset" style="display: none;"><i class="fa-solid fa-arrows-rotate"></i></button>
-            <div id="dps-timer-btns" class="dps-timer-buttons" style="flex-grow: 1; justify-content: flex-end; display: none;">
-            </div>
-            <button class="control-button" id="zoom-in-button" title="Aumentar tamaño"><i class="fa-solid fa-plus"></i></button>
-            <!-- Botón de mover ventana (drag) -->
-            <div class="drag-indicator" id="drag-indicator" title="Mover ventana">
-                <i class="fa-solid fa-up-down-left-right"></i>
-            </div>
-            <button class="control-button" id="zoom-out-button" title="Reducir tamaño"><i class="fa-solid fa-minus"></i></button>
-            <!-- Botón Advanced/Lite -->
-        <button class="control-button advanced-lite-btn" id="advanced-lite-btn" title="Toggle Advanced/Lite">Advanced</button>
-        <!-- Botón DPS/Healer solo visible en modo Lite -->
-        <button class="control-button advanced-lite-btn" id="lite-dps-healer-btn" style="display:none;">DPS</button>
-            <!-- Botón de bloqueo/desbloqueo -->
-            <button class="control-button" id="lock-button" title="Bloquear posición" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-lock-open"></i></button>
-            <button class="control-button" id="close-button" title="Cerrar ventana" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-xmark"></i></button>
+            <button class="control-button" id="reset-button" title="Reset" style="display: block;"><i class="fa-solid fa-arrows-rotate"></i></button>
+            <button class="control-button fa-solid fa-minus" id="zoom-out-button" title="Zoom Out"></button>
+            <button class="control-button fa-solid fa-plus" id="zoom-in-button" title="Zoom In"></button>
+            <button class="control-button advanced-lite-btn" id="advanced-lite-btn" title="Toggle Advanced/Lite">Advanced</button>
+            <button class="control-button advanced-lite-btn" id="lite-dps-healer-btn" style="display:none;">DPS</button>
+            <div style="flex: 1;"></div>
+            <button class="control-button fa-solid fa-xmark" id="close-button" title="Close Window"></button>
         </header>
-        <div style="display: flex; flex-direction:column; gap:6px; transform: translateY(36px);">
-            <div id="dps-timer" style="text-align:center;font-size:1.2rem;font-weight:700;margin-top:40px;min-height:28px;color:#e0e0e0;display:none; text-shadow: var(--text-shadow);"></div>
+        <div style="display: flex; flex-direction:column; gap:6px; margin-top: 4px;">
             <div id="encounters-section"></div>
-            <div id="logs-section"></div>
         </div>
-        <div id="loading-indicator" style="margin-top: 10px;">
+        <div id="loading-indicator" style="margin-top: 4px;">
             <i class="fa-solid fa-spinner fa-spin"></i>
-        </div>         
-        <main id="player-bars-container" style="margin-top: 40px; border: 1px solid rgba(255, 255, 255, 0.1); display: none;"></main>
-        <div class="resize-handle" id="resize-handle" title="Arrastrar para redimensionar">
+        </div>
+        <main id="player-bars-container" style="margin-top: 4px; display: none;"></main>
+        <div class="resize-handle" id="resize-handle" title="Drag to resize">
             <i class="fa-solid fa-grip-lines"></i>
         </div>
     </div>
