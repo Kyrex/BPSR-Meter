@@ -79,7 +79,6 @@ let syncTimerInterval;
 let syncCountdown = 0;
 const SYNC_RESET_TIME = 80; // Segundos para el reinicio automático
 let syncTimerDisplayTimeout; // Para el retardo de 200ms
-let isLocked = false; // Estado de bloqueo de la ventana
 let logPreviewTimeout; // Declarar logPreviewTimeout aquí
 let size = [650, 250];
 
@@ -152,8 +151,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if (syncButton) {
-    // syncButton.addEventListener('click', syncData); // El botón de sincronización ya no es clicable
+  if (window.electronAPI) {
+    window.electronAPI.onLockStateChanged((locked) => {
+      document.body.classList.toggle("locked", locked);
+    });
   }
 
   const closeButton = document.getElementById("close-button");

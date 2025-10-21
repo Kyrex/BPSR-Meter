@@ -4,6 +4,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   closeWindow: () => ipcRenderer.send("close-window"),
   resizeWindow: (width, height) =>
     ipcRenderer.send("resize-window", width, height),
+  onLockStateChanged: (callback) =>
+    ipcRenderer.on("lock-state-changed", (event, isLocked) =>
+      callback(isLocked)
+    ),
 });
 
 window.addEventListener("DOMContentLoaded", () => {
