@@ -5,12 +5,9 @@ const { Server } = require('socket.io');
 const path = require('path');
 const fsPromises = require('fs').promises;
 const fs = require('fs');
-const EncountersDB = require('./database');
 
 const SETTINGS_PATH = path.join('./settings.json');
 const LOGS_DPS_PATH = path.join('./logs_dps.json');
-
-const encountersDB = new EncountersDB();
 
 function initializeApi(app, server, io, userDataManager, logger, globalSettings) {
     app.use(cors());
@@ -48,29 +45,7 @@ function initializeApi(app, server, io, userDataManager, logger, globalSettings)
             // Save current encounter to database before clearing
             const userData = userDataManager.getAllUsersData();
             const userArray = Object.values(userData).filter(u => u.total_damage && u.total_damage.total > 0);
-
-            if (userArray.length > 0) {
-                const totalDamage = userArray.reduce((acc, u) => acc + (u.total_damage?.total || 0), 0);
-                const timestamp = userDataManager.startTime;
-                const durationMs = Date.now() - timestamp;
-
-                const result = encountersDB.insertEncounter({
-                    timestamp: timestamp,
-                    date: new Date(timestamp).toISOString(),
-                    duration_ms: durationMs,
-                    total_damage: totalDamage,
-                    player_count: userArray.length,
-                    data: userData
-                });
-
-                if (!result.success) {
-                    logger.error('Failed to save encounter:', result.error);
-                }
-
-                // Clean up old encounters, keep last 100
-                encountersDB.deleteOldEncounters(100);
-            }
-
+          
             userDataManager.clearAll(globalSettings);
             console.log('¡Estadísticas limpiadas!');
             res.json({
@@ -342,34 +317,6 @@ function initializeApi(app, server, io, userDataManager, logger, globalSettings)
             logs = JSON.parse(fs.readFileSync(LOGS_DPS_PATH, 'utf8'));
         }
         res.json(logs);
-    });
-
-    // Get list of saved encounters
-    app.get('/api/encounters', async (req, res) => {
-        try {
-            const encounters = encountersDB.getEncounters(50);
-            res.json({ code: 0, data: encounters });
-        } catch (error) {
-            logger.error('Error in /api/encounters:', error);
-            res.status(500).json({ code: 1, msg: 'Internal server error' });
-        }
-    });
-
-    // Get specific encounter data
-    app.get('/api/encounters/:id', async (req, res) => {
-        try {
-            const { id } = req.params;
-            const encounter = encountersDB.getEncounterById(id);
-
-            if (!encounter) {
-                return res.status(404).json({ code: 1, msg: 'Encounter not found' });
-            }
-
-            res.json({ code: 0, encounter: encounter });
-        } catch (error) {
-            logger.error('Error in /api/encounters/:id:', error);
-            res.status(500).json({ code: 1, msg: 'Internal server error' });
-        }
     });
 
     io.on('connection', (socket) => {
