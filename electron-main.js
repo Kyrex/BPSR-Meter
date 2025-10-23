@@ -19,8 +19,7 @@ function lockWindow(lock) {
   } else {
     mainWindow.setIgnoreMouseEvents(false);
   }
-  mainWindow.webContents.send("lock-state-changed", isLocked);
-  console.log(`Is window locked: ${isLocked}`);
+  mainWindow.webContents.send("on-lock", isLocked);
 }
 
 // Función para verificar si un puerto está en uso
@@ -74,18 +73,12 @@ async function killProcessUsingPort(port) {
 }
 
 async function createWindow() {
-  console.log("Killing process at port 8989!");
   await killProcessUsingPort(8989);
-
   serverPort = await findAvailablePort();
-  console.log(`Port available: ${serverPort}`);
 
   mainWindow = new BrowserWindow({
     width: 650,
     height: 250,
-    minWidth: 650,
-    minHeight: 200,
-    maxWidth: 650,
     transparent: true,
     frame: false,
     alwaysOnTop: true,
@@ -111,18 +104,28 @@ async function createWindow() {
     }
   });
 
+  ipcMain.on("set-position", (event, x, y) => {
+    if (!mainWindow) return;
+    mainWindow.setPosition(x, y);
+  });
+
   mainWindow.on("focus", () => {
     lockWindow(false);
-    mainWindow.setMovable(!isLocked);
   });
 
   mainWindow.on("blur", () => {
     lockWindow(true);
-    console.log("Window lost focus");
+  });
+
+  mainWindow.on("move", () => {
+    const pos = mainWindow.getPosition();
+    mainWindow.webContents.send("on-move", pos);
   });
 
   mainWindow.webContents.on("did-finish-load", () => {
-    mainWindow.webContents.send("lock-state-changed", isLocked);
+    const pos = mainWindow.getPosition();
+    mainWindow.webContents.send("on-lock", isLocked);
+    mainWindow.webContents.send("on-move", pos);
   });
 
   // Determinar ruta absoluta a server.js según entorno
@@ -134,9 +137,7 @@ async function createWindow() {
     // Modo empaquetado: usar app.getAppPath() para acceder dentro del asar
     serverPath = path.join(app.getAppPath(), "server.js");
   }
-  console.log(
-    "Lanzando server.js en puerto " + serverPort + " con ruta: " + serverPath
-  );
+  console.log(`Opening server.js at ${serverPath}:${serverPort}`);
 
   // Usar fork para lanzar el servidor como proceso hijo
   const { fork } = require("child_process");
@@ -153,9 +154,9 @@ async function createWindow() {
   createWindow.serverLoaded = false;
   createWindow.serverTimeout = setTimeout(() => {
     if (!createWindow.serverLoaded) {
-      console.log("ERROR: El servidor no respondió a tiempo.");
+      console.log("Timeout loading server.");
       mainWindow.loadURL(
-        'data:text/html,<h2 style="color:red">Error: El servidor no respondió a tiempo.<br>Revisa iniciar_log.txt para más detalles.</h2>'
+        'data:text/html,<h2 style="color:red">Error: Timeout loading server.</h2>'
       );
     }
   }, 10000); // 10 segundos de espera
@@ -183,9 +184,9 @@ async function createWindow() {
   let serverLoaded = false;
   let serverTimeout = setTimeout(() => {
     if (!serverLoaded) {
-      console.log("ERROR: El servidor no respondió a tiempo.");
+      console.log("Timeout loading server.");
       mainWindow.loadURL(
-        'data:text/html,<h2 style="color:red">Error: El servidor no respondió a tiempo.<br>Revisa iniciar_log.txt para más detalles.</h2>'
+        'data:text/html,<h2 style="color:red">Error: Timeout loading server.</h2>'
       );
     }
   }, 10000); // 10 segundos de espera

@@ -1,13 +1,3 @@
-// Estado global para modo Lite
-let isLiteMode = true;
-let liteModeType = "dps"; // 'dps' o 'healer'
-
-let empty = false;
-let startTime;
-let currentLog;
-let logSelected = -1;
-let logs = new Array();
-
 const professionMap = {
   // Clases Principales
   雷影剑士: { name: "Stormblade", icon: "class_stormblade.webp", role: "dps" },
@@ -72,103 +62,183 @@ const defaultProfession = {
   role: "dps",
 };
 
+const SYNC_RESET_TIME = 80;
+const WIN_MIN_SIZE_LITE = [500, 100];
+const WIN_MIN_SIZE_ADV = [650, 100];
+const WIN_MAX_SIZE = [2000, 2000];
+
+let currentLogId;
+let currentLogData;
+let logs = new Array();
+
+let startTime;
 let lastTotalDamage = 0;
 let lastDamageChangeTime = Date.now();
-let currentZoom = 1.0; // Factor de zoom inicial
 let syncTimerInterval;
 let syncCountdown = 0;
-const SYNC_RESET_TIME = 80; // Segundos para el reinicio automático
-let syncTimerDisplayTimeout; // Para el retardo de 200ms
-let logPreviewTimeout; // Declarar logPreviewTimeout aquí
-let size = [650, 250];
+let syncTimerDisplayTimeout;
 
-const dpsTimerDiv = document.getElementById("dps-timer");
-const playerBarsContainer = document.getElementById("player-bars-container");
-const syncButton = document.getElementById("sync-button");
-const syncIcon = document.querySelector("#sync-button .sync-icon");
-const syncTimerSpan = document.querySelector("#sync-button .sync-timer");
-const encountersSection = document.getElementById("encounters-section"); // Sección de encuentros guardados
-const loadingIndicator = document.getElementById("loading-indicator"); // Indicador de carga
-let currentEncounterId = null; // ID del encuentro actualmente cargado
-let isViewingHistory = false; // Si estamos viendo un encuentro histórico
+let winState = {
+  size: [WIN_MIN_SIZE_LITE[0], 250],
+  position: [0, 0],
+  zoom: 1,
+  isLiteMode: true,
+  liteModeType: "dps",
+};
+
+const elDpsTimer = document.getElementById("dps-timer");
+const elPlayerBarsContainer = document.getElementById("player-bars-container");
+const elLogsSection = document.getElementById("encounters-section");
+const elLoading = document.getElementById("loading-indicator");
+const elSyncButton = document.getElementById("sync-button");
+const elResetButton = document.getElementById("reset-button");
+const elAdvLiteButton = document.getElementById("advanced-lite-btn");
+const elModeTypeButton = document.getElementById("lite-dps-healer-btn");
+const elZoomInButton = document.getElementById("zoom-in-button");
+const elZoomOutButton = document.getElementById("zoom-out-button");
+const elCloseButton = document.getElementById("close-button");
+const elResizeHandle = document.getElementById("resize-handle");
+const elHeader = document.getElementById("header");
+const elDpsMeter = document.querySelector(".dps-meter");
+const elSyncIcon = document.querySelector("#sync-button .sync-icon");
+const elSyncTimer = document.querySelector("#sync-button .sync-timer");
+
+function saveWindowState() {
+  localStorage.setItem("win_state", JSON.stringify(winState));
+}
+
+function loadWindowState() {
+  const state = localStorage.getItem("win_state");
+  if (state) {
+    winState = {
+      ...winState,
+      ...JSON.parse(state),
+    };
+  }
+
+  const [rw, rh] = winState.size;
+  const [dx, dy] = winState.position;
+  window.electronAPI?.setPosition(dx, dy);
+  resizeWindow(rw, rh);
+  applyZoom();
+}
+
+const clamp = (value, min, max) => {
+  return Math.max(min, Math.min(max, value));
+};
+
+const getUserTotalDamage = (user) => {
+  return user.total_damage && user.total_damage.total
+    ? Number(user.total_damage.total)
+    : 0;
+};
+const getUserTotalHealing = (user) => {
+  return user.total_healing && user.total_healing.total
+    ? Number(user.total_healing.total)
+    : 0;
+};
+
+const updateWindowMinSize = () => {
+  const width = winState.isLiteMode
+    ? WIN_MIN_SIZE_LITE[0]
+    : WIN_MIN_SIZE_ADV[0];
+  if (elDpsMeter) {
+    elDpsMeter.style.width = `${width}px`;
+  }
+  if (elResizeHandle) {
+    const r = winState.zoom * width;
+    elResizeHandle.style.width = `${r}px`;
+  }
+  resizeWindow(null, null);
+  applyZoom();
+};
 
 document.addEventListener("DOMContentLoaded", () => {
-  const resetButton = document.getElementById("reset-button");
-  if (resetButton) {
-    resetButton.addEventListener("click", () => {
-      console.log("Clicked!");
+  loadWindowState();
+  updateWindowMinSize();
+
+  if (elResetButton) {
+    elResetButton.addEventListener("click", () => {
       saveCurrentEncounter();
       resetDpsMeter();
     });
   }
 
-  // Botón Advanced/Lite
-  const advLiteBtn = document.getElementById("advanced-lite-btn");
-  const liteDpsHealerBtn = document.getElementById("lite-dps-healer-btn");
-  if (advLiteBtn) {
-    advLiteBtn.addEventListener("click", () => {
-      isLiteMode = !isLiteMode;
-      advLiteBtn.classList.toggle("lite", isLiteMode);
-      advLiteBtn.textContent = isLiteMode ? "Lite" : "Advanced";
-      // Mostrar/ocultar el botón DPS/Healer
-      if (liteDpsHealerBtn) {
-        liteDpsHealerBtn.style.display = isLiteMode ? "inline-flex" : "none";
+  if (elAdvLiteButton) {
+    elAdvLiteButton.textContent = winState.isLiteMode ? "Lite" : "Adv.";
+    elAdvLiteButton.addEventListener("click", () => {
+      winState.isLiteMode = !winState.isLiteMode;
+      updateWindowMinSize();
+
+      elAdvLiteButton.classList.toggle("lite", winState.isLiteMode);
+      elAdvLiteButton.textContent = winState.isLiteMode ? "Lite" : "Adv.";
+      if (elModeTypeButton) {
+        elModeTypeButton.style.display = winState.isLiteMode
+          ? "inline-flex"
+          : "none";
       }
-      fetchDataAndRender();
+      if (currentLogId) {
+        loadEncounter(currentLogId);
+      } else {
+        fetchDataAndRender();
+      }
     });
   }
-  if (liteDpsHealerBtn) {
-    liteDpsHealerBtn.addEventListener("click", () => {
-      liteModeType = liteModeType === "dps" ? "healer" : "dps";
-      liteDpsHealerBtn.textContent = liteModeType === "dps" ? "DPS" : "Healer";
-      liteDpsHealerBtn.classList.toggle(
+  if (elModeTypeButton) {
+    elModeTypeButton.textContent = winState.liteModeType === "dps" ? "⚔" : "✚";
+    elModeTypeButton.addEventListener("click", () => {
+      winState.liteModeType =
+        winState.liteModeType === "dps" ? "healer" : "dps";
+      elModeTypeButton.textContent =
+        winState.liteModeType === "dps" ? "⚔" : "✚";
+      elModeTypeButton.classList.toggle(
         "lite",
-        isLiteMode
+        winState.isLiteMode
       ); /* Asegura que el botón Lite/Healer también tenga el estilo 'lite' */
-      fetchDataAndRender();
+      if (currentLogId) {
+        loadEncounter(currentLogId);
+      } else {
+        fetchDataAndRender();
+      }
     });
   }
   // Inicializar visibilidad y estilo del botón al cargar
-  if (liteDpsHealerBtn) {
-    liteDpsHealerBtn.style.display = isLiteMode ? "inline-flex" : "none";
-    liteDpsHealerBtn.classList.toggle("lite", isLiteMode);
+  if (elModeTypeButton) {
+    elModeTypeButton.style.display = winState.isLiteMode
+      ? "inline-flex"
+      : "none";
+    elModeTypeButton.classList.toggle("lite", winState.isLiteMode);
   }
 
-  const zoomInButton = document.getElementById("zoom-in-button");
-  const zoomOutButton = document.getElementById("zoom-out-button");
-
-  if (zoomInButton) {
-    zoomInButton.addEventListener("click", () => {
-      currentZoom = Math.min(2.0, currentZoom + 0.1); // Limitar zoom máximo a 2.0
+  if (elZoomInButton) {
+    elZoomInButton.addEventListener("click", () => {
+      winState.zoom = Math.min(2.0, winState.zoom + 0.1);
       applyZoom();
     });
   }
 
-  if (zoomOutButton) {
-    zoomOutButton.addEventListener("click", () => {
-      currentZoom = Math.max(0.7, currentZoom - 0.1); // Limitar zoom mínimo a 0.5
+  if (elZoomOutButton) {
+    elZoomOutButton.addEventListener("click", () => {
+      winState.zoom = Math.max(0.7, winState.zoom - 0.1);
       applyZoom();
     });
   }
 
-  if (window.electronAPI) {
-    window.electronAPI.onLockStateChanged((locked) => {
-      document.body.classList.toggle("locked", locked);
+  window.electronAPI?.onLock((locked) => {
+    document.body.classList.toggle("locked", locked);
+  });
+  window.electronAPI?.onMove((pos) => {
+    winState.position = pos;
+    saveWindowState();
+  });
+
+  if (elCloseButton) {
+    elCloseButton.addEventListener("click", () => {
+      window.electronAPI?.closeWindow();
     });
   }
 
-  const closeButton = document.getElementById("close-button");
-  if (closeButton) {
-    closeButton.addEventListener("click", () => {
-      if (window.electronAPI) {
-        window.electronAPI.closeWindow();
-      }
-    });
-  }
-
-  // Resize handle functionality
-  const resizeHandle = document.getElementById("resize-handle");
-  if (resizeHandle && window.electronAPI) {
+  if (elResizeHandle) {
     let isResizing = false;
     let startMouseY = 0;
     let startWindowHeight = 0;
@@ -186,13 +256,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const doResize = (e) => {
       if (!isResizing) return;
       const deltaY = e.pageY - startMouseY;
+      const minHeight = window.isLiteMode
+        ? WIN_MIN_SIZE_LITE[1]
+        : WIN_MIN_SIZE_ADV[1];
       const newHeight = Math.max(
-        200,
-        Math.min(2000, startWindowHeight + deltaY)
+        minHeight,
+        Math.min(WIN_MAX_SIZE[1], startWindowHeight + deltaY)
       );
-      console.log(size);
       resizeWindow(null, Math.round(newHeight));
-      console.log(Math.round(newHeight));
     };
 
     const stopResize = () => {
@@ -203,48 +274,50 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     };
 
-    resizeHandle.addEventListener("mousedown", startResize);
+    elResizeHandle.addEventListener("mousedown", startResize);
     window.addEventListener("mousemove", doResize);
     window.addEventListener("mouseup", stopResize);
   }
 });
 
 function applyZoom() {
-  if (playerBarsContainer) {
-    playerBarsContainer.style.transform = `scale(${currentZoom})`;
-    playerBarsContainer.style.transformOrigin = "top left";
-    document.getElementById("encounters-section").style.width =
-      `${currentZoom * 100}%`;
-    document.getElementById("header").style.width = `${currentZoom * 100}%`;
+  if (elPlayerBarsContainer) {
+    elPlayerBarsContainer.style.transform = `scale(${winState.zoom})`;
+    elPlayerBarsContainer.style.transformOrigin = "top left";
+    elLogsSection.style.width = `${winState.zoom * 100}%`;
+    elHeader.style.width = `${winState.zoom * 100}%`;
+
+    const width = winState.isLiteMode
+      ? WIN_MIN_SIZE_LITE[0]
+      : WIN_MIN_SIZE_ADV[0];
+    const wPx = `${winState.zoom * width}px`;
+    if (elResizeHandle) elResizeHandle.style.width = wPx;
+    if (elLoading) elLoading.style.width = wPx;
     updateWindowSize();
   }
 }
 
 function updateWindowSize() {
-  const dpsMeter = document.querySelector(".dps-meter");
-  const container = document.getElementById("player-bars-container");
-  if (!dpsMeter || !container || !window.electronAPI) return;
-
-  const baseWidth = 650;
-
-  const [_, h] = size;
-  const finalWidth = Math.round(baseWidth * currentZoom);
-  const finalHeight = Math.max(200, Math.round(h * currentZoom));
-
+  if (!elDpsMeter || !elPlayerBarsContainer) return;
+  const minWidth = window.isLiteMode
+    ? WIN_MIN_SIZE_LITE[0]
+    : WIN_MIN_SIZE_ADV[0];
+  const finalWidth = Math.round(minWidth * winState.zoom);
   resizeWindow(finalWidth, null);
 }
 
 function resizeWindow(width, height) {
-  const [w, h] = size;
-  size = [width ? width : w, height ? height : h];
-  const [nw, nh] = size;
-  window.electronAPI.resizeWindow(nw, nh);
+  const [w, h] = winState.size;
+  winState.size = [width ? width : w, height ? height : h];
+  const [nw, nh] = winState.size;
+  window.electronAPI?.resizeWindow(nw, nh);
+  saveWindowState();
 }
 
 function resetDpsMeter() {
   fetch("/api/clear");
-  dpsTimerDiv.style.display = "none";
-  dpsTimerDiv.innerText = "";
+  elDpsTimer.style.display = "none";
+  elDpsTimer.innerText = "";
   console.log("Medidor reiniciado.");
   lastTotalDamage = 0;
   lastDamageChangeTime = Date.now();
@@ -270,23 +343,23 @@ function updateSyncButtonState() {
     // Si el temporizador está activo (hay cuenta regresiva)
     if (syncCountdown <= 60) {
       // Mostrar temporizador, ocultar icono
-      syncIcon.style.display = "none";
-      syncIcon.classList.remove("spinning");
-      syncTimerSpan.innerText = `${syncCountdown}s`;
-      syncTimerSpan.style.display = "block";
+      elSyncIcon.style.display = "none";
+      elSyncIcon.classList.remove("spinning");
+      elSyncTimer.innerText = `${syncCountdown}s`;
+      elSyncTimer.style.display = "block";
     } else {
       // Mostrar icono girando, ocultar temporizador
-      syncIcon.style.display = "block";
-      syncIcon.classList.add("spinning"); // Asegura que gire continuamente
-      syncTimerSpan.style.display = "none";
+      elSyncIcon.style.display = "block";
+      elSyncIcon.classList.add("spinning"); // Asegura que gire continuamente
+      elSyncTimer.style.display = "none";
     }
   } else {
     // Si el temporizador no está activo (no hay cuenta regresiva)
     // Mostrar icono girando, ocultar temporizador
-    syncIcon.style.display = "block";
-    syncIcon.classList.add("spinning"); // Asegura que gire continuamente
-    syncTimerSpan.style.display = "none";
-    syncTimerSpan.innerText = "";
+    elSyncIcon.style.display = "block";
+    elSyncIcon.classList.add("spinning"); // Asegura que gire continuamente
+    elSyncTimer.style.display = "none";
+    elSyncTimer.innerText = "";
   }
 }
 
@@ -346,20 +419,14 @@ function formatDate(dateString) {
   }
 }
 
-function renderEncounters(encounters) {
-  console.log(
-    "Rendering encounters dropdown with",
-    encounters.length,
-    "encounters"
-  );
-
-  encountersSection.style.display = "block";
+function updateEncountersUI() {
+  elLogsSection.style.display = "block";
   let html =
     '<select id="encounters-dropdown" style="border: none; width:100%;padding:6px 4px;font-size:1rem;background:rgba(0,0,0,0.3);color:var(--text-primary);">';
   html += '<option value="">Live DPS</option>';
 
-  encounters.forEach((enc) => {
-    const selected = currentEncounterId === enc.id ? "selected" : "";
+  logs.forEach((enc) => {
+    const selected = currentLogId === enc.id ? "selected" : "";
     const duration = formatDuration(enc.duration_ms);
     const date = formatDate(enc.date);
     const damage = formatStat(enc.total_damage);
@@ -367,14 +434,12 @@ function renderEncounters(encounters) {
   });
 
   html += "</select>";
-  encountersSection.innerHTML = html;
-  console.log("Encounters dropdown HTML updated");
+  elLogsSection.innerHTML = html;
 
-  const dropdown = document.getElementById("encounters-dropdown");
-  dropdown.onchange = async function () {
+  const elDropdown = document.getElementById("encounters-dropdown");
+  elDropdown.onchange = async function () {
     if (this.value === "") {
-      currentEncounterId = null;
-      isViewingHistory = false;
+      currentLogId = null;
       fetchDataAndRender();
     } else {
       loadEncounter(this.value);
@@ -383,18 +448,17 @@ function renderEncounters(encounters) {
 }
 
 function loadEncounter(encounterId) {
+  if (!encounterId) return;
   const log = logs.find((log) => log.id == encounterId);
-  console.log(`loading... ${log}`);
   if (!log) return;
-  currentEncounterId = encounterId;
-  isViewingHistory = true;
+  currentLogId = encounterId;
   renderHistoricalData(log.data);
 }
 
 function saveCurrentEncounter() {
-  if (!currentLog) return;
+  if (!currentLogData) return;
 
-  const userArray = Object.values(currentLog).filter(
+  const userArray = Object.values(currentLogData).filter(
     (u) => u.total_damage && u.total_damage.total > 0
   );
   if (userArray.length <= 0) return;
@@ -420,88 +484,7 @@ function saveCurrentEncounter() {
 
   updateEncountersUI();
   startTime = null;
-  currentLog = null;
-  console.log(`Saved encounters... ${logs.length}`);
-}
-
-function renderHistoricalData(userData) {
-  loadingIndicator.style.display = "none";
-  playerBarsContainer.style.display = "flex";
-
-  let userArray = Object.values(userData);
-  userArray = userArray.filter(
-    (u) => u.total_damage && u.total_damage.total > 0
-  );
-
-  const sumaTotalDamage = userArray.reduce(
-    (acc, u) =>
-      acc +
-      (u.total_damage && u.total_damage.total
-        ? Number(u.total_damage.total)
-        : 0),
-    0
-  );
-
-  userArray.forEach((u) => {
-    const userDamage =
-      u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0;
-    u.damagePercent =
-      sumaTotalDamage > 0
-        ? Math.max(0, Math.min(100, (userDamage / sumaTotalDamage) * 100))
-        : 0;
-  });
-
-  if (isLiteMode && liteModeType === "healer") {
-    const totalHealingContribution = userArray.reduce(
-      (acc, u) =>
-        acc +
-        (u.total_healing && u.total_healing.total
-          ? Number(u.total_healing.total)
-          : 0),
-      0
-    );
-    userArray.forEach((u) => {
-      const userHealing =
-        u.total_healing && u.total_healing.total
-          ? Number(u.total_healing.total)
-          : 0;
-      u.healingPercent =
-        totalHealingContribution > 0
-          ? Math.max(
-              0,
-              Math.min(100, (userHealing / totalHealingContribution) * 100)
-            )
-          : 0;
-    });
-    userArray.sort((a, b) => b.healingPercent - a.healingPercent);
-  } else {
-    userArray.sort(
-      (a, b) =>
-        (b.total_damage && b.total_damage.total
-          ? Number(b.total_damage.total)
-          : 0) -
-        (a.total_damage && a.total_damage.total
-          ? Number(a.total_damage.total)
-          : 0)
-    );
-  }
-
-  userArray = userArray.slice(0, 20);
-
-  // Render using same logic as live data
-  const container = document.getElementById("player-bars-container");
-  if (isLiteMode) {
-    renderLiteBars(container, userArray);
-  } else {
-    renderAdvancedBars(container, userArray);
-  }
-
-  updateWindowSize();
-}
-
-function updateEncountersUI() {
-  console.log("Updating encounters UI...");
-  renderEncounters(logs);
+  currentLogData = null;
 }
 
 function getHealthColor(percentage) {
@@ -545,10 +528,9 @@ const playerColors = [
   "rgba(255, 159, 64, 0.5)", // Naranja
 ];
 
-function renderLiteBars(container, userArray) {
-  container.innerHTML = userArray
+function renderLiteBars(userArray) {
+  elPlayerBarsContainer.innerHTML = userArray
     .map((u, index) => {
-      const dps = Number(u.total_dps) || 0;
       const professionParts = u.profession.split("-");
       const mainProfessionKey = professionParts[0];
       const subProfessionKey = professionParts[1];
@@ -560,17 +542,17 @@ function renderLiteBars(container, userArray) {
       let mgColor = bgColor.replace("0.5", "1");
       let barFillWidth, barFillBackground, value1, value2, value3, iconHtml;
 
-      if (liteModeType === "dps") {
+      if (winState.liteModeType === "dps") {
+        const dps = Number(u.total_dps) || 0;
         barFillWidth = u.damagePercent;
         barFillBackground =
-          u.total_dps > 0
-            ? `linear-gradient(0, ${bgColor}, transparent)`
-            : "none";
+          dps > 0 ? `linear-gradient(0, ${bgColor}, transparent)` : "none";
         iconHtml = "<span style='font-size:1.1em;margin-right:2px;'>🔥</span>";
         value1 = `${formatStat(u.total_damage.total || 0)}`;
         value2 = `${Math.round(u.damagePercent)}%`;
         value3 = `${formatStat(dps)}/s`;
       } else {
+        const hps = Number(u.total_hps) || 0;
         mgColor = "#22873a";
         barFillWidth = u.healingPercent;
         barFillBackground =
@@ -581,7 +563,7 @@ function renderLiteBars(container, userArray) {
           "<span style='font-size:1.1em;margin-right:2px; color: #28a745; text-shadow: 0 0 2px white, 0 0 2px white, 0 0 2px white, 0 0 2px white;'>⛨</span>";
         value1 = `${formatStat((u.total_healing && u.total_healing.total) || 0)}`;
         value2 = `${Math.round(u.healingPercent)}%`;
-        value3 = `${formatStat(dps)}/s`;
+        value3 = `${formatStat(hps)}/s`;
       }
 
       return `
@@ -593,9 +575,9 @@ function renderLiteBars(container, userArray) {
                     <span class="lite-bar-name">${userName}</span>
                 </div>
                 <div class="lite-bar-values">
-                    <span>${value1}</span>
-                    <span>${value3}</span>
-                    <span>${value2}</span>
+                    <span style="min-width: 65px">${value1}</span>
+                    <span style="min-width: 70px">${value3}</span>
+                    <span style="min-width: 55px">${value2}</span>
                 </div>
             </div>
         </div>
@@ -604,8 +586,8 @@ function renderLiteBars(container, userArray) {
     .join("");
 }
 
-function renderAdvancedBars(container, userArray) {
-  container.innerHTML = userArray
+function renderAdvancedBars(userArray) {
+  elPlayerBarsContainer.innerHTML = userArray
     .map((u, index) => {
       const professionParts = u.profession.split("-");
       const mainProfessionKey = professionParts[0];
@@ -618,9 +600,6 @@ function renderAdvancedBars(container, userArray) {
         professionName += ` - ${subProf.name}`;
       }
       const dps = Number(u.total_dps) || 0;
-      const totalHealing = u.total_healing
-        ? Number(u.total_healing.total) || 0
-        : 0;
       const color = playerColors[index % playerColors.length];
       const dpsColor =
         dps > 0 ? `linear-gradient(90deg, transparent, ${color})` : "none";
@@ -689,7 +668,7 @@ function renderAdvancedBars(container, userArray) {
                                 <span class="additional-stat-value">${formatStat(u.total_damage.total || 0)}</span>
                             </div>
                             <div class="additional-stat-row">
-                                <span class="additional-stat-icon" style="color: #28a745;">⛨</span>
+                                <span class="additional-stat-icon" style="color: #28a745;">✚</span>
                                 <span style="flex: 1"></span>
                                 <span class="additional-stat-value">${formatStat(u.total_healing.total || 0)}</span>
                             </div>
@@ -702,45 +681,50 @@ function renderAdvancedBars(container, userArray) {
     .join("");
 }
 
+function renderHistoricalData(userData) {
+  elLoading.style.display = "none";
+  elPlayerBarsContainer.style.display = "flex";
+
+  const userValues = Object.values(userData);
+  const [_, userArray] = handleUserArray(userValues);
+
+  // Render using same logic as live data
+  if (winState.isLiteMode) {
+    renderLiteBars(userArray);
+  } else {
+    renderAdvancedBars(userArray);
+  }
+
+  updateWindowSize();
+}
+
 async function fetchDataAndRender() {
-  const container = document.getElementById("player-bars-container");
   try {
-    const dataRes = await fetch("/api/data");
-    const userData = await dataRes.json();
+    const userData = await fetch("/api/data").then((res) => res.json());
 
-    let userArray = Object.values(userData.user);
-    userArray = userArray.filter(
-      (u) => u.total_damage && u.total_damage.total > 0
-    );
+    const userValues = Object.values(userData.user);
+    const [totalDamage, userArray] = handleUserArray(userValues);
 
-    if ((!userArray || userArray.length === 0) && !isViewingHistory) {
-      loadingIndicator.style.display = "flex";
-      playerBarsContainer.style.display = "none";
+    if ((!userArray || userArray.length === 0) && !currentLogId) {
+      elLoading.style.display = "flex";
+      elPlayerBarsContainer.style.display = "none";
       saveCurrentEncounter();
       updateSyncButtonState();
+      return;
     }
     if (!startTime) startTime = Date.now();
-    currentLog = userArray;
+    currentLogData = userArray;
 
-    if (isViewingHistory) {
+    if (currentLogId) {
       return;
     }
 
-    loadingIndicator.style.display = "none";
-    playerBarsContainer.style.display = "flex";
+    elLoading.style.display = "none";
+    elPlayerBarsContainer.style.display = "flex";
 
-    const sumaTotalDamage = userArray.reduce(
-      (acc, u) =>
-        acc +
-        (u.total_damage && u.total_damage.total
-          ? Number(u.total_damage.total)
-          : 0),
-      0
-    );
-
-    if (sumaTotalDamage > 0) {
-      if (sumaTotalDamage !== lastTotalDamage) {
-        lastTotalDamage = sumaTotalDamage;
+    if (totalDamage > 0) {
+      if (totalDamage !== lastTotalDamage) {
+        lastTotalDamage = totalDamage;
         lastDamageChangeTime = Date.now();
         stopSyncTimer();
       } else {
@@ -758,68 +742,53 @@ async function fetchDataAndRender() {
       stopSyncTimer();
     }
 
-    // Cálculo de damagePercent para todos los usuarios (base para Advanced y Lite DPS)
-    userArray.forEach((u) => {
-      const userDamage =
-        u.total_damage && u.total_damage.total
-          ? Number(u.total_damage.total)
-          : 0;
-      u.damagePercent =
-        sumaTotalDamage > 0
-          ? Math.max(0, Math.min(100, (userDamage / sumaTotalDamage) * 100))
-          : 0;
-    });
-
-    if (isLiteMode && liteModeType === "healer") {
-      const totalHealingContribution = userArray.reduce(
-        (acc, u) =>
-          acc +
-          (u.total_healing && u.total_healing.total
-            ? Number(u.total_healing.total)
-            : 0),
-        0
-      );
-      userArray.forEach((u) => {
-        const userHealing =
-          u.total_healing && u.total_healing.total
-            ? Number(u.total_healing.total)
-            : 0;
-        u.healingPercent =
-          totalHealingContribution > 0
-            ? Math.max(
-                0,
-                Math.min(100, (userHealing / totalHealingContribution) * 100)
-              )
-            : 0;
-      });
-      userArray.sort((a, b) => b.healingPercent - a.healingPercent);
+    if (winState.isLiteMode) {
+      renderLiteBars(userArray);
     } else {
-      // Modo DPS (Lite o Advanced)
-      userArray.sort(
-        (a, b) =>
-          (b.total_damage && b.total_damage.total
-            ? Number(b.total_damage.total)
-            : 0) -
-          (a.total_damage && a.total_damage.total
-            ? Number(a.total_damage.total)
-            : 0)
-      );
-    }
-
-    userArray = userArray.slice(0, 20);
-
-    if (isLiteMode) {
-      renderLiteBars(container, userArray);
-    } else {
-      renderAdvancedBars(container, userArray);
+      renderAdvancedBars(userArray);
     }
   } catch (err) {
-    if (container) {
-      container.innerHTML = `<div id="message-display">An error occured: ${err}</div>`;
+    if (elPlayerBarsContainer) {
+      elPlayerBarsContainer.innerHTML = `<div id="message-display">An error occured: ${err}</div>`;
     }
   } finally {
     updateSyncButtonState();
   }
+}
+
+function handleUserArray(userArray) {
+  if (!userArray) return [0, userArray];
+
+  userArray = userArray.filter(
+    (u) => u.total_damage && u.total_damage.total > 0
+  );
+
+  let sumTotalDamage = 0;
+  let sumTotalHealing = 0;
+  userArray.forEach((u) => {
+    sumTotalDamage += getUserTotalDamage(u);
+    sumTotalHealing += getUserTotalHealing(u);
+  });
+
+  userArray.forEach((u) => {
+    const userDamage = getUserTotalDamage(u);
+    const userHealing = getUserTotalHealing(u);
+    u.healingPercent =
+      sumTotalHealing > 0
+        ? clamp((userHealing / sumTotalHealing) * 100, 0, 100)
+        : 0;
+    u.damagePercent =
+      sumTotalDamage > 0
+        ? clamp((userDamage / sumTotalDamage) * 100, 0, 100)
+        : 0;
+  });
+
+  if (winState.isLiteMode && winState.liteModeType === "healer") {
+    userArray.sort((a, b) => b.healingPercent - a.healingPercent);
+  } else {
+    userArray.sort((a, b) => b.damagePercent - a.damagePercent);
+  }
+  return [sumTotalDamage, userArray.slice(0, 20)];
 }
 
 // Actualizar UI cada 50ms

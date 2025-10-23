@@ -8,11 +8,23 @@ body {
     padding: 0px;
 }
 
+:focus {
+    outline: none;
+}
+
+option {
+    background-color: #222;
+}
+
+option:checked {
+    background-color: #444;
+}
+
 /* Botón Advanced/Lite: rectangular y alargado */
 .advanced-lite-btn {
     border-radius: 18px !important;
-    width: 110px !important;
-    min-width: 90px;
+    width: 60px !important;
+    min-width: 60px;
     height: 32px !important;
     background: rgba(255, 255, 255, 0.10);
     color: #fff;
@@ -79,7 +91,6 @@ body {
 }
 
 .lite-bar-values span {
-    min-width: 100px;
     text-align: end;
 }
 
@@ -153,6 +164,7 @@ body {
     background: transparent;
     color: var(--text-primary);
     font-family: var(--font-main);
+    text-shadow: 1px 1px 2px #222;
     line-height: 1.4;
     margin: 0;
     padding: 0;
@@ -594,6 +606,11 @@ input[type="text"] {
     -webkit-app-region: no-drag;
 }
 
+.control-button:hover {
+    border: 1px solid #6666;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
 #reset-button {
     background-color: rgba(219, 104, 121, 0.5);
 }
@@ -691,7 +708,7 @@ input[type="text"] {
     /* Tamaño del icono */
     display: block;
     /* Mostrar por defecto */
-    color: #00aaff;
+    color: #fff;
     /* Color azul para el icono */
 }
 
@@ -844,11 +861,12 @@ input[type="text"] {
 #loading-indicator {
     text-align: center;
     color: var(--text-secondary);
-    font-size: 2.5rem;
+    font-size: 2rem;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 56px;
+    margin-top: 10px;
+    height: 36px;
 }
 
 #loading-indicator .fa-spinner {

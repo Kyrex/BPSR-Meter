@@ -2,12 +2,12 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("electronAPI", {
   closeWindow: () => ipcRenderer.send("close-window"),
+  setPosition: (x, y) => ipcRenderer.send("set-position", x, y),
   resizeWindow: (width, height) =>
     ipcRenderer.send("resize-window", width, height),
-  onLockStateChanged: (callback) =>
-    ipcRenderer.on("lock-state-changed", (event, isLocked) =>
-      callback(isLocked)
-    ),
+  onLock: (callback) =>
+    ipcRenderer.on("on-lock", (ev, isLocked) => callback(isLocked)),
+  onMove: (callback) => ipcRenderer.on("on-move", (ev, pos) => callback(pos)),
 });
 
 window.addEventListener("DOMContentLoaded", () => {

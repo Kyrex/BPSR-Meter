@@ -40,26 +40,13 @@ function initializeApi(app, server, io, userDataManager, logger, globalSettings)
         res.json(data);
     });
 
-    app.get('/api/clear', async (req, res) => {
-        try {
-            // Save current encounter to database before clearing
-            const userData = userDataManager.getAllUsersData();
-            const userArray = Object.values(userData).filter(u => u.total_damage && u.total_damage.total > 0);
-          
-            userDataManager.clearAll(globalSettings);
-            console.log('¡Estadísticas limpiadas!');
-            res.json({
-                code: 0,
-                msg: '¡Estadísticas limpiadas!',
-            });
-        } catch (error) {
-            logger.error('Error in /api/clear:', error);
-            userDataManager.clearAll(globalSettings);
-            res.json({
-                code: 0,
-                msg: '¡Estadísticas limpiadas!',
-            });
-        }
+    app.get('/api/clear', (req, res) => {
+        userDataManager.clearAll(globalSettings); // Pasar globalSettings
+        console.log('¡Estadísticas limpiadas!');
+        res.json({
+            code: 0,
+            msg: '¡Estadísticas limpiadas!',
+        });
     });
 
     app.post('/api/clear-logs', async (req, res) => {
