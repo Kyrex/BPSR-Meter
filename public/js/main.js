@@ -759,9 +759,8 @@ async function fetchDataAndRender() {
 function handleUserArray(userArray) {
   if (!userArray) return [0, userArray];
 
-  userArray = userArray.filter(
-    (u) => u.total_damage && u.total_damage.total > 0
-  );
+  userArray = userArray.filter((u = getUserTotalDamage(u)));
+  userArray = userArray.slice(0, 20);
 
   let sumTotalDamage = 0;
   let sumTotalHealing = 0;
@@ -788,7 +787,7 @@ function handleUserArray(userArray) {
   } else {
     userArray.sort((a, b) => b.damagePercent - a.damagePercent);
   }
-  return [sumTotalDamage, userArray.slice(0, 20)];
+  return [sumTotalDamage, userArray];
 }
 
 // Actualizar UI cada 50ms
