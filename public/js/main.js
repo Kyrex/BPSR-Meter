@@ -759,7 +759,7 @@ async function fetchDataAndRender() {
 function handleUserArray(userArray) {
   if (!userArray) return [0, userArray];
 
-  userArray = userArray.filter((u = getUserTotalDamage(u)));
+  userArray = userArray.filter((u = getUserTotalDamage(u) > 0));
   userArray = userArray.slice(0, 20);
 
   let sumTotalDamage = 0;
