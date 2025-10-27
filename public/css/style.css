@@ -132,7 +132,6 @@ option:checked {
     height: 28px;
     object-fit: contain;
     border-radius: 8px;
-    margin: 0 8px 0 0;
     background: none;
     display: block;
 }
@@ -293,7 +292,7 @@ input[type="text"] {
     display: flex;
     align-items: center;
     height: 100%;
-    padding: 4px 8px;
+    padding: 2px 8px;
     gap: 4px;
 }
 
@@ -302,9 +301,6 @@ input[type="text"] {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    /* Alinea los elementos al inicio */
-    padding-top: 4px;
-    /* Pequeño padding superior para subir el nombre */
     gap: 1px;
     min-width: 120px;
 }
@@ -342,15 +338,17 @@ input[type="text"] {
 }
 
 .player-name {
-    font-size: 0.95rem;
-    font-weight: 600;
+    font-size: 0.9rem;
+    font-weight: 700;
     color: var(--text-primary);
+    margin-top: 8px;
     margin-bottom: 2px;
     /* Ajustado para subir el nombre */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 140px;
+    max-width: 160px;
+    height: 16px;
 }
 
 .player-gear-score {
@@ -361,9 +359,14 @@ input[type="text"] {
 }
 
 .player-id {
-    font-size: 0.8rem;
+    font-size: 0.5rem;
+    min-height: 0.5rem;
     color: var(--text-secondary);
+    overflow: hidden;
     white-space: nowrap;
+    text-overflow: ellipsis;
+    max-width: 160px;
+    display: none;
 }
 
 .stats-group {
@@ -471,6 +474,10 @@ input[type="text"] {
     /* Para posicionar la barra de vida */
 }
 
+.name-col .additional-stat-row {
+    width: 160px;
+}
+
 .additional-stat-icon {
     font-size: 0.85rem;
     color: var(--text-secondary);
@@ -498,7 +505,7 @@ input[type="text"] {
     background-color: rgba(17, 17, 17, 0.699);
     /* Fondo de la barra */
     border-radius: 6px;
-    width: 130%;
+    width: 100%;
     z-index: 1;
     /* Detrás del texto y el icono */
     overflow: hidden;
@@ -810,16 +817,6 @@ input[type="text"] {
     display: flex;
     flex-direction: column;
     justify-content: center;
-}
-
-.player-name {
-    font-size: 1rem;
-    font-weight: 700;
-    min-height: 1.2em;
-    max-width: 140px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
 .player-id {

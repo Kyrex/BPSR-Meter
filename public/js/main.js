@@ -1,64 +1,179 @@
+class UsersDB {
+  constructor() {
+    this.usersDB = null;
+    this.usersCache = new Map();
+    this.initDB();
+  }
+
+  async initDB() {
+    if (this.usersDB) return this.usersDB;
+    return new Promise((resolve, reject) => {
+      const request = indexedDB.open("UserDatabase", 1);
+
+      request.onupgradeneeded = (event) => {
+        const db = event.target.result;
+        if (!db.objectStoreNames.contains("users")) {
+          db.createObjectStore("users", { keyPath: "id" });
+        }
+      };
+
+      request.onsuccess = (event) => {
+        this.usersDB = event.target.result;
+        resolve(this.usersDB);
+      };
+
+      request.onerror = (event) => reject(event.target.error);
+    });
+  }
+
+  getUsername(id) {
+    if (!this.usersDB) return "";
+    if (!this.usersCache.has(id)) {
+      this.usersCache.set(id, "");
+      new Promise((resolve, reject) => {
+        const tx = this.usersDB.transaction("users", "readonly");
+        const store = tx.objectStore("users");
+        const request = store.get(id);
+
+        request.onsuccess = () => {
+          const result = request.result;
+          const name = result?.name ?? null;
+          if (name) this.usersCache.set(id, name);
+          resolve(name);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    }
+    return this.usersCache.get(id) ?? "";
+  }
+
+  setUsername(id, name) {
+    if (!this.usersDB) return;
+    if (this.usersCache.has(id)) return;
+    this.usersCache.set(id, name);
+    new Promise((resolve, reject) => {
+      const tx = this.usersDB.transaction("users", "readwrite");
+      const store = tx.objectStore("users");
+      const request = store.put({ id, name });
+      request.onsuccess = () => resolve(true);
+      request.onerror = () => reject(request.error);
+    });
+  }
+}
+
 const professionMap = {
-  // Clases Principales
-  雷影剑士: { name: "Stormblade", icon: "class_stormblade.webp", role: "dps" },
-  冰魔导师: { name: "Frost Mage", icon: "class_frost_mage.webp", role: "dps" },
+  // Main roles
+  雷影剑士: {
+    name: "Stormblade",
+    icon: "icons/class_stormblade.webp",
+    role: "dps",
+  },
+  冰魔导师: {
+    name: "Frost Mage",
+    icon: "icons/class_frost_mage.webp",
+    role: "dps",
+  },
   青岚骑士: {
     name: "Wind Knight",
-    icon: "class_wind_knight.webp",
+    icon: "icons/class_wind_knight.webp",
     role: "tank",
   },
   森语者: {
     name: "Verdant Oracle",
-    icon: "class_verdant_oracle.webp",
+    icon: "icons/class_verdant_oracle.webp",
     role: "dps",
   },
   巨刃守护者: {
     name: "Heavy Guardian",
-    icon: "class_heavy_guardian.webp",
+    icon: "icons/class_heavy_guardian.webp",
     role: "tank",
   },
-  神射手: { name: "Marksman", icon: "class_marksman.webp", role: "dps" },
+  神射手: { name: "Marksman", icon: "icons/class_marksman.webp", role: "dps" },
   神盾骑士: {
     name: "Shield Knight",
-    icon: "class_shield_knight.webp",
+    icon: "icons/class_shield_knight.webp",
     role: "tank",
   },
   灵魂乐手: {
     name: "Soul Musician",
-    icon: "class_soul_musician.webp",
+    icon: "icons/class_soul_musician.webp",
     role: "dps",
   },
-  "涤罪恶火·战斧": { name: "Fire Axe", icon: "Fire Assxe.webp", role: "dps" },
+  "涤罪恶火·战斧": {
+    name: "Fire Axe",
+    icon: "icons/missing_icon.png",
+    role: "dps",
+  },
 
-  "雷霆一闪·手炮": { name: "Gunner", icon: "desconocido.png", role: "dps" },
+  "雷霆一闪·手炮": {
+    name: "Gunner",
+    icon: "icons/missing_icon.png",
+    role: "dps",
+  },
   "暗灵祈舞·仪刀/仪仗": {
     name: "Spirit Dancer",
-    icon: "desconocido.png",
+    icon: "icons/missing_icon.png",
     role: "dps",
   },
 
-  // Especializaciones
-  居合: { name: "laido Slash", icon: "class_stormblade.webp", role: "dps" },
-  月刃: { name: "MoonStrike", icon: "class_stormblade.webp", role: "dps" },
-  冰矛: { name: "Icicle", icon: "class_frost_mage.webp", role: "dps" },
-  射线: { name: "Frostbeam", icon: "class_frost_mage.webp", role: "dps" },
-  防盾: { name: "Vanguard", icon: "class_shield_knight.webp", role: "tank" },
-  岩盾: { name: "Skyward", icon: "Fire Assxe.webp", role: "tank" },
-  惩戒: { name: "Smite", icon: "class_verdant_oracle.webp", role: "dps" },
-  愈合: { name: "Lifebind", icon: "class_verdant_oracle.webp", role: "healer" },
-  格挡: { name: "Block", icon: "class_shield_knight.webp", role: "tank" },
-  狼弓: { name: "Wildpack", icon: "class_marksman.webp", role: "dps" },
-  鹰弓: { name: "Falconry", icon: "class_marksman.webp", role: "dps" },
-  光盾: { name: "Shield", icon: "class_shield_knight.webp", role: "tank" },
-  协奏: { name: "Concerto", icon: "class_soul_musician.webp", role: "dps" },
-  狂音: { name: "Dissonance", icon: "class_soul_musician.webp", role: "dps" },
-  空枪: { name: "Empty Gun", icon: "class_wind_knight.webp", role: "dps" },
-  重装: { name: "Heavy Armor", icon: "class_wind_knight.webp", role: "dps" },
+  // Spec roles
+  居合: {
+    name: "laido Slash",
+    icon: "icons/class_stormblade.webp",
+    role: "dps",
+  },
+  月刃: {
+    name: "MoonStrike",
+    icon: "icons/class_stormblade.webp",
+    role: "dps",
+  },
+  冰矛: { name: "Icicle", icon: "icons/class_frost_mage.webp", role: "dps" },
+  射线: { name: "Frostbeam", icon: "icons/class_frost_mage.webp", role: "dps" },
+  防盾: {
+    name: "Vanguard",
+    icon: "icons/class_shield_knight.webp",
+    role: "tank",
+  },
+  岩盾: { name: "Skyward", icon: "icons/Fire Assxe.webp", role: "tank" },
+  惩戒: { name: "Smite", icon: "icons/class_verdant_oracle.webp", role: "dps" },
+  愈合: {
+    name: "Lifebind",
+    icon: "icons/class_verdant_oracle.webp",
+    role: "healer",
+  },
+  格挡: { name: "Block", icon: "icons/class_shield_knight.webp", role: "tank" },
+  狼弓: { name: "Wildpack", icon: "icons/class_marksman.webp", role: "dps" },
+  鹰弓: { name: "Falconry", icon: "icons/class_marksman.webp", role: "dps" },
+  光盾: {
+    name: "Shield",
+    icon: "icons/class_shield_knight.webp",
+    role: "tank",
+  },
+  协奏: {
+    name: "Concerto",
+    icon: "icons/class_soul_musician.webp",
+    role: "dps",
+  },
+  狂音: {
+    name: "Dissonance",
+    icon: "icons/class_soul_musician.webp",
+    role: "dps",
+  },
+  空枪: {
+    name: "Empty Gun",
+    icon: "icons/class_wind_knight.webp",
+    role: "dps",
+  },
+  重装: {
+    name: "Heavy Armor",
+    icon: "icons/class_wind_knight.webp",
+    role: "dps",
+  },
 };
 
 const defaultProfession = {
   name: "Unknown",
-  icon: "desconocido.png",
+  icon: "icons/missing_icon.png",
   role: "dps",
 };
 
@@ -67,9 +182,11 @@ const WIN_MIN_SIZE_LITE = [500, 100];
 const WIN_MIN_SIZE_ADV = [650, 100];
 const WIN_MAX_SIZE = [2000, 2000];
 
+let userUid;
 let currentLogId;
 let currentLogData;
 let logs = new Array();
+const usersDB = new UsersDB();
 
 let startTime;
 let lastTotalDamage = 0;
@@ -152,66 +269,7 @@ const updateWindowMinSize = () => {
   applyZoom();
 };
 
-let usersDB = null;
-const usersCache = new Map();
-async function initDB() {
-  if (usersDB) return usersDB;
-
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open("UserDatabase", 1);
-
-    request.onupgradeneeded = (event) => {
-      const db = event.target.result;
-      if (!db.objectStoreNames.contains("users")) {
-        db.createObjectStore("users", { keyPath: "id" });
-      }
-    };
-
-    request.onsuccess = (event) => {
-      usersDB = event.target.result;
-      resolve(usersDB);
-    };
-
-    request.onerror = (event) => reject(event.target.error);
-  });
-}
-
-function getUsername(id) {
-  if (!usersDB) return "";
-  if (!usersCache.has(id)) {
-    usersCache.set(id, "");
-    new Promise((resolve, reject) => {
-      const tx = usersDB.transaction("users", "readonly");
-      const store = tx.objectStore("users");
-      const request = store.get(id);
-
-      request.onsuccess = () => {
-        const result = request.result;
-        const name = result?.name ?? null;
-        if (name) usersCache.set(id, name);
-        resolve(name);
-      };
-      request.onerror = () => reject(request.error);
-    });
-  }
-  return usersCache.get(id) ?? "";
-}
-
-function setUsername(id, name) {
-  if (!usersDB) return;
-  if (usersCache.has(id)) return;
-  usersCache.set(id, name);
-  new Promise((resolve, reject) => {
-    const tx = usersDB.transaction("users", "readwrite");
-    const store = tx.objectStore("users");
-    const request = store.put({ id, name });
-    request.onsuccess = () => resolve(true);
-    request.onerror = () => reject(request.error);
-  });
-}
-
 document.addEventListener("DOMContentLoaded", () => {
-  initDB();
   loadWindowState();
   updateWindowMinSize();
 
@@ -288,6 +346,13 @@ document.addEventListener("DOMContentLoaded", () => {
   window.electronAPI?.onMove((pos) => {
     winState.position = pos;
     saveWindowState();
+  });
+  window.electronAPI?.onArgs((args) => {
+    const KEY = "--uid=";
+    const arg = args.find((a) => a.startsWith(KEY));
+    if (!arg) return;
+    userUid = arg.substring(KEY.length).trim();
+    console.log("User uid:", userUid);
   });
 
   if (elCloseButton) {
@@ -575,14 +640,12 @@ function formatStat(value) {
   return value.toFixed(0);
 }
 
-const playerColors = [
-  "rgba(255, 99, 132, 0.5)", // Rojo
-  "rgba(54, 162, 235, 0.5)", // Azul
-  "rgba(255, 206, 86, 0.5)", // Amarillo
-  "rgba(75, 192, 192, 0.5)", // Verde
-  "rgba(153, 102, 255, 0.5)", // Morado
-  "rgba(255, 159, 64, 0.5)", // Naranja
-];
+const roleColors = {
+  dps: "rgba(145, 48, 48, 0.7)",
+  tank: "rgba(56, 120, 193, 0.7)",
+  healer: "rgba(35, 158, 101, 0.7)",
+  self: "rgba(255, 159, 64, 0.7)",
+};
 
 function renderLiteBars(userArray) {
   elPlayerBarsContainer.innerHTML = userArray
@@ -594,8 +657,12 @@ function renderLiteBars(userArray) {
       const subProf = professionMap[subProfessionKey];
       let prof = subProf || mainProf;
       const userName = u.name || "";
-      const bgColor = playerColors[index % playerColors.length];
-      let mgColor = bgColor.replace("0.5", "1");
+      const role = subProf?.role ?? mainProf?.role;
+      const bgColor =
+        u.id === userUid
+          ? roleColors.self
+          : (roleColors[role] ?? "rgba(0, 0, 0, 0.7)");
+      let mgColor = bgColor.replace("0.7", "1");
       let barFillWidth, barFillBackground, value1, value2, value3, iconHtml;
 
       if (winState.liteModeType === "dps") {
@@ -603,20 +670,16 @@ function renderLiteBars(userArray) {
         barFillWidth = u.damagePercent;
         barFillBackground =
           dps > 0 ? `linear-gradient(0, ${bgColor}, transparent)` : "none";
-        iconHtml = "<span style='font-size:1.1em;margin-right:2px;'>🔥</span>";
         value1 = `${formatStat(u.total_damage.total || 0)}`;
         value2 = `${Math.round(u.damagePercent)}%`;
         value3 = `${formatStat(dps)}/s`;
       } else {
         const hps = Number(u.total_hps) || 0;
-        mgColor = "#22873a";
         barFillWidth = u.healingPercent;
         barFillBackground =
-          u.total_healing && u.total_healing.total > 0
-            ? `linear-gradient(180deg, transparent, #28a745)`
+          getUserTotalHealing(u) > 0
+            ? `linear-gradient(0deg, ${bgColor}, transparent)`
             : "none";
-        iconHtml =
-          "<span style='font-size:1.1em;margin-right:2px; color: #28a745; text-shadow: 0 0 2px white, 0 0 2px white, 0 0 2px white, 0 0 2px white;'>⛨</span>";
         value1 = `${formatStat((u.total_healing && u.total_healing.total) || 0)}`;
         value2 = `${Math.round(u.healingPercent)}%`;
         value3 = `${formatStat(hps)}/s`;
@@ -627,7 +690,7 @@ function renderLiteBars(userArray) {
             <div class="lite-bar-fill" style="width: ${barFillWidth}%; background: ${barFillBackground}; border-bottom: 2px solid ${mgColor}"></div>
             <div class="lite-bar-content" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; justify-content: space-between;">
                 <div style="display: flex; align-items: center; gap: 5px;">
-                    <img class="lite-bar-icon" src="icons/${prof.icon}" alt="icon" style="margin-left:2px; margin-right:5px;" />
+                    <img class="lite-bar-icon" src="${prof.icon}" alt="icon" style="margin-left:2px; margin-right:5px;" />
                     <span class="lite-bar-name">${userName}</span>
                 </div>
                 <div class="lite-bar-values">
@@ -656,7 +719,12 @@ function renderAdvancedBars(userArray) {
         professionName += ` - ${subProf.name}`;
       }
       const dps = Number(u.total_dps) || 0;
-      const color = playerColors[index % playerColors.length];
+      const role = subProf?.role ?? mainProf?.role;
+      const color =
+        u.id === userUid
+          ? roleColors.self
+          : (roleColors[role] ?? "rgba(0, 0, 0, 0.7)");
+
       const dpsColor =
         dps > 0 ? `linear-gradient(90deg, transparent, ${color})` : "none";
       const nombre = u.name || "";
@@ -673,17 +741,17 @@ function renderAdvancedBars(userArray) {
       return `<div class="player-bar" data-rank="${u.rank}">
                 <div class="progress-fill" style="width: ${u.damagePercent}%; background: ${dpsColor}"></div>
                 <div class="bar-content">
-                    <img class="class-icon" src="icons/${prof.icon}" alt="icon" style="height: 42px; width: 42px;">
+                    <img class="class-icon" src="${prof.icon}" alt="icon" style="height: 42px; width: 42px;">
                     <div class="column name-col">
                         <span class="player-name">${nombre}</span>
-                        <div class="additional-stat-row" style="height: 18px; margin-top: 1px; margin-bottom: 1px;">
+                        <span class="player-id">${professionName}</span>
+                        <div class="additional-stat-row" style="height: 14px; margin-top: 1px; margin-bottom: 1px;">
                             <span class="additional-stat-icon" style="color: #dc3545; position: absolute; left: 4px; z-index: 2;">❤</span>
                             <div class="hp-bar-background">
                                 <div class="hp-bar-fill" style="width: ${((u.hp || 0) / (u.max_hp || 1)) * 100}%; background-color: ${getHealthColor(((u.hp || 0) / (u.max_hp || 1)) * 100)};"></div>
                             </div>
                             <span class="additional-stat-value" style="width: 100%; text-align: center; font-size: 0.8rem; color: white; text-shadow: 1px 1px 1px black;">${formatStat(u.hp || 0)}/${formatStat(u.max_hp || 0)}</span>
                         </div>
-                        <span class="player-id">${professionName}</span>
                     </div>
                     <div class="column stats-col" style="margin-left: 40px;">
                         <div class="stats-group">
@@ -695,17 +763,17 @@ function renderAdvancedBars(userArray) {
                     <div class="column extra-col" style="margin-left: -10px;">
                         <div class="stats-extra">
                             <div class="stat-row">
-                            <span class="stat-icon"> ✸</span>
+                            <span class="stat-icon">✸</span>
                                 <span class="stat-label">CRIT</span>
                                 <span class="stat-value">${crit}%</span>
                             </div>
                             <div class="stat-row">
-                            <span class="stat-icon"> ☘</span>
+                            <span class="stat-icon">☘</span>
                                 <span class="stat-label">LUCK</span>
                                 <span class="stat-value">${lucky}%</span>
                             </div>
                             <div class="stat-row">
-                            <span class="stat-icon"> ⚔</span>
+                            <span class="stat-icon">⚔</span>
                                 <span class="stat-label">MAX</span>
                                 <span class="stat-value">${formatStat(peak)}</span>
                             </div>
@@ -759,10 +827,11 @@ async function fetchDataAndRender() {
     const userData = await fetch("/api/data").then((res) => res.json());
     Object.entries(userData.user).forEach((entry) => {
       const [id, user] = entry;
+      userData.user[id].id = id;
       if (user.name) {
-        setUsername(id, user.name);
+        usersDB.setUsername(id, user.name);
       } else {
-        userData.user[id].name = getUsername(id);
+        userData.user[id].name = usersDB.getUsername(id);
       }
     });
 
@@ -813,6 +882,7 @@ async function fetchDataAndRender() {
       renderAdvancedBars(userArray);
     }
   } catch (err) {
+    console.error(err);
     if (elPlayerBarsContainer) {
       elPlayerBarsContainer.style.display = "block";
       elPlayerBarsContainer.innerHTML = `<div id="message-display">An error occured: ${err}</div>`;

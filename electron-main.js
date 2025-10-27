@@ -126,6 +126,7 @@ async function createWindow() {
     const pos = mainWindow.getPosition();
     mainWindow.webContents.send("on-lock", isLocked);
     mainWindow.webContents.send("on-move", pos);
+    mainWindow.webContents.send("on-args", process.argv);
   });
 
   // Determinar ruta absoluta a server.js según entorno
