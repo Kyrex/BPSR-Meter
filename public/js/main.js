@@ -80,12 +80,12 @@ const professionMap = {
   青岚骑士: {
     name: "Wind Knight",
     icon: "icons/class_wind_knight.webp",
-    role: "tank",
+    role: "dps",
   },
   森语者: {
     name: "Verdant Oracle",
     icon: "icons/class_verdant_oracle.webp",
-    role: "dps",
+    role: "healer",
   },
   巨刃守护者: {
     name: "Heavy Guardian",
@@ -101,7 +101,7 @@ const professionMap = {
   灵魂乐手: {
     name: "Soul Musician",
     icon: "icons/class_soul_musician.webp",
-    role: "dps",
+    role: "healer",
   },
   "涤罪恶火·战斧": {
     name: "Fire Axe",
@@ -138,8 +138,12 @@ const professionMap = {
     icon: "icons/class_shield_knight.webp",
     role: "tank",
   },
-  岩盾: { name: "Skyward", icon: "icons/Fire Assxe.webp", role: "tank" },
-  惩戒: { name: "Smite", icon: "icons/class_verdant_oracle.webp", role: "dps" },
+  岩盾: { name: "Skyward", icon: "icons/missing_icon.png", role: "tank" },
+  惩戒: {
+    name: "Smite",
+    icon: "icons/class_verdant_oracle.webp",
+    role: "healer",
+  },
   愈合: {
     name: "Lifebind",
     icon: "icons/class_verdant_oracle.webp",
@@ -156,12 +160,12 @@ const professionMap = {
   协奏: {
     name: "Concerto",
     icon: "icons/class_soul_musician.webp",
-    role: "dps",
+    role: "healer",
   },
   狂音: {
     name: "Dissonance",
     icon: "icons/class_soul_musician.webp",
-    role: "dps",
+    role: "healer",
   },
   空枪: {
     name: "Empty Gun",
