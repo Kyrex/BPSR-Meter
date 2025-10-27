@@ -59,6 +59,10 @@ class UsersDB {
       request.onerror = () => reject(request.error);
     });
   }
+
+  clear() {
+    this.usersCache.clear();
+  }
 }
 
 const professionMap = {
@@ -843,7 +847,7 @@ async function fetchDataAndRender() {
       elPlayerBarsContainer.style.display = "none";
       saveCurrentEncounter();
       updateSyncButtonState();
-      usersCache.clear();
+      usersDB.clear();
       return;
     }
     if (!startTime) startTime = Date.now();
