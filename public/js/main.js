@@ -86,7 +86,6 @@ let winState = {
   liteModeType: "dps",
 };
 
-const elDpsTimer = document.getElementById("dps-timer");
 const elPlayerBarsContainer = document.getElementById("player-bars-container");
 const elLogsSection = document.getElementById("encounters-section");
 const elLoading = document.getElementById("loading-indicator");
@@ -153,7 +152,66 @@ const updateWindowMinSize = () => {
   applyZoom();
 };
 
+let usersDB = null;
+const usersCache = new Map();
+async function initDB() {
+  if (usersDB) return usersDB;
+
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("UserDatabase", 1);
+
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains("users")) {
+        db.createObjectStore("users", { keyPath: "id" });
+      }
+    };
+
+    request.onsuccess = (event) => {
+      usersDB = event.target.result;
+      resolve(usersDB);
+    };
+
+    request.onerror = (event) => reject(event.target.error);
+  });
+}
+
+function getUsername(id) {
+  if (!usersDB) return "";
+  if (!usersCache.has(id)) {
+    usersCache.set(id, "");
+    new Promise((resolve, reject) => {
+      const tx = usersDB.transaction("users", "readonly");
+      const store = tx.objectStore("users");
+      const request = store.get(id);
+
+      request.onsuccess = () => {
+        const result = request.result;
+        const name = result?.name ?? null;
+        if (name) usersCache.set(id, name);
+        resolve(name);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+  return usersCache.get(id) ?? "";
+}
+
+function setUsername(id, name) {
+  if (!usersDB) return;
+  if (usersCache.has(id)) return;
+  usersCache.set(id, name);
+  new Promise((resolve, reject) => {
+    const tx = usersDB.transaction("users", "readwrite");
+    const store = tx.objectStore("users");
+    const request = store.put({ id, name });
+    request.onsuccess = () => resolve(true);
+    request.onerror = () => reject(request.error);
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  initDB();
   loadWindowState();
   updateWindowMinSize();
 
@@ -316,8 +374,6 @@ function resizeWindow(width, height) {
 
 function resetDpsMeter() {
   fetch("/api/clear");
-  elDpsTimer.style.display = "none";
-  elDpsTimer.innerText = "";
   console.log("Medidor reiniciado.");
   lastTotalDamage = 0;
   lastDamageChangeTime = Date.now();
@@ -701,6 +757,14 @@ function renderHistoricalData(userData) {
 async function fetchDataAndRender() {
   try {
     const userData = await fetch("/api/data").then((res) => res.json());
+    Object.entries(userData.user).forEach((entry) => {
+      const [id, user] = entry;
+      if (user.name) {
+        setUsername(id, user.name);
+      } else {
+        userData.user[id].name = getUsername(id);
+      }
+    });
 
     const userValues = Object.values(userData.user);
     const [totalDamage, userArray] = handleUserArray(userValues);
@@ -710,6 +774,7 @@ async function fetchDataAndRender() {
       elPlayerBarsContainer.style.display = "none";
       saveCurrentEncounter();
       updateSyncButtonState();
+      usersCache.clear();
       return;
     }
     if (!startTime) startTime = Date.now();
@@ -749,6 +814,7 @@ async function fetchDataAndRender() {
     }
   } catch (err) {
     if (elPlayerBarsContainer) {
+      elPlayerBarsContainer.style.display = "block";
       elPlayerBarsContainer.innerHTML = `<div id="message-display">An error occured: ${err}</div>`;
     }
   } finally {
