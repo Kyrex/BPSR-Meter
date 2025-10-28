@@ -679,18 +679,16 @@ function renderLiteBars(userArray) {
         barFillBackground =
           dps > 0 ? `linear-gradient(0, ${bgColor}, transparent)` : "none";
         value1 = `${formatStat(u.total_damage.total || 0)}`;
-        value2 = `${Math.round(u.damagePercent)}%`;
-        value3 = `${formatStat(dps)}/s`;
+        value2 = `${Math.round(u.damagePercent)}`;
+        value3 = `${formatStat(dps)}`;
       } else {
         const hps = Number(u.total_hps) || 0;
         barFillWidth = u.healingPercent;
         barFillBackground =
-          getUserTotalHealing(u) > 0
-            ? `linear-gradient(0deg, ${bgColor}, transparent)`
-            : "none";
+          hps > 0 ? `linear-gradient(0deg, ${bgColor}, transparent)` : "none";
         value1 = `${formatStat((u.total_healing && u.total_healing.total) || 0)}`;
-        value2 = `${Math.round(u.healingPercent)}%`;
-        value3 = `${formatStat(hps)}/s`;
+        value2 = `${Math.round(u.healingPercent)}`;
+        value3 = `${formatStat(hps)}`;
       }
 
       return `
@@ -703,8 +701,8 @@ function renderLiteBars(userArray) {
                 </div>
                 <div class="lite-bar-values">
                     <span style="min-width: 65px">${value1}</span>
-                    <span style="min-width: 70px">${value3}</span>
-                    <span style="min-width: 55px">${value2}</span>
+                    <span style="min-width: 70px">${value3}<i style="color: #eeea; font-size:8pt;">/s</i></span>
+                    <span style="min-width: 55px">${value2}<i style="color: #eeea; font-size:8pt;">%</i></span>
                 </div>
             </div>
         </div>

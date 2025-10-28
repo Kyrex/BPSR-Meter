@@ -153,7 +153,7 @@ option:checked {
     --bar-bg: rgba(13, 17, 23, 0.5);
     --text-primary: #ffffff;
     --text-secondary: rgba(255, 255, 255, 0.7);
-    --font-main: 'Inter', sans-serif;
+    --font-main: "Jura", sans-serif;
     --shadow-soft: 0 2px 4px rgba(0, 0, 0, 0.1);
     --border-soft: 1px solid rgba(255, 255, 255, 0.1);
     --text-shadow: 0 0 2px rgba(0, 0, 0, 0.7), 0 0 4px rgba(0, 0, 0, 0.5);
@@ -162,7 +162,7 @@ option:checked {
 body {
     background: transparent;
     color: var(--text-primary);
-    font-family: var(--font-main);
+    font-family: "Jura", sans-serif;
     text-shadow: 1px 1px 2px #222;
     line-height: 1.4;
     margin: 0;
@@ -965,4 +965,9 @@ input[type="text"] {
 
 body.locked .resize-handle {
     display: none;
+}
+
+select,
+option {
+    font-family: "Jura", sans-serif;
 }
