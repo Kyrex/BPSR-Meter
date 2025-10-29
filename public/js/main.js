@@ -41,7 +41,7 @@ function generateBar(user) {
   const barPercent = user.bar_percent;
 
   const [main, spec] = getUserProfessions(user);
-  const icon = spec.icon || main.icon;
+  const icon = spec?.icon || main.icon;
 
   return `
     <tr style="--p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent)">
@@ -93,7 +93,7 @@ async function fetchUsers() {
       const totalPerc = percent(totalDmg, totalDamage);
       const barPerc = percent(totalDmg, maxDamage);
       return {
-        id: id,
+        id: id.toString(),
         rank: rank + 1,
         name: user.name,
         role: user.role,
@@ -120,7 +120,7 @@ async function fetchUsers() {
     }
   }
 
-  return n.slice(0, 20);
+  return list.slice(0, 20);
 }
 
 const clear = () => {
