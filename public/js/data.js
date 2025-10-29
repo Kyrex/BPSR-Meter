@@ -167,7 +167,7 @@ function getUserColor(user, userUid) {
   }
 
   const [main, spec] = getUserProfessions(user);
-  const role = spec.role || main.role;
+  const role = spec?.role || main.role;
   return roleColors[role] || "#222";
 }
 
