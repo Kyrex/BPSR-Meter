@@ -41,7 +41,6 @@ const professionMap = {
     icon: "icons/missing_icon.png",
     role: "dps",
   },
-
   "雷霆一闪·手炮": {
     name: "Gunner",
     icon: "icons/missing_icon.png",
@@ -71,7 +70,11 @@ const professionMap = {
     icon: "icons/class_shield_knight.webp",
     role: "tank",
   },
-  岩盾: { name: "Skyward", icon: "icons/missing_icon.png", role: "tank" },
+  岩盾: {
+    name: "Skyward",
+    icon: "icons/class_heavy_guardian.webp",
+    role: "tank",
+  },
   惩戒: {
     name: "Smite",
     icon: "icons/class_verdant_oracle.webp",
