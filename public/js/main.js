@@ -229,10 +229,10 @@ window.addEventListener("DOMContentLoaded", (_) => {
 
   elCloseBtn.addEventListener("click", () => electron?.closeWindow());
   elResetBtn.addEventListener("click", () => clear());
-  elSwapBtn.addEventListener(
-    "click",
-    () => (playerLimit = playerLimit === 5 ? 20 : 5)
-  );
+  elSwapBtn.addEventListener("click", () => {
+    playerLimit = playerLimit === 5 ? 20 : 5;
+    elSwapBtn.innerHTML = `${playerLimit}P`;
+  });
   if (elDragBtn) {
     let isResizing = false;
     let mouseStartX = 0;
