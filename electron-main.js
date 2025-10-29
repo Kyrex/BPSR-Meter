@@ -77,8 +77,8 @@ async function createWindow() {
   serverPort = await findAvailablePort();
 
   mainWindow = new BrowserWindow({
-    width: 440 - 4,
-    height: 300 + 64,
+    width: 440,
+    height: 364,
     transparent: true,
     frame: false,
     alwaysOnTop: true,

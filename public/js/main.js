@@ -1,19 +1,32 @@
 const elSpinner = document.getElementById("dps-spinner");
 const elCloseBtn = document.getElementById("close-button");
 const elResetBtn = document.getElementById("reset-button");
+const elSwapBtn = document.getElementById("swap-button");
+const elDragBtn = document.getElementById("drag-button");
 const elDpsTable = document.getElementById("dps-table");
 const elDpsTableUser = document.getElementById("dps-table-user");
 const elDpsTimer = document.getElementById("dps-timer");
 const elDpsLogs = document.getElementById("dps-logs");
 
+const WIN_MIN_SIZE = [380, 200];
 let logsList = new Array();
 let userUid;
 let startTime;
+let playerLimit = 5;
 let currentLogIdx = -1;
 let latestUsersList;
 let winState = {
+  size: WIN_MIN_SIZE,
   position: [0, 0],
 };
+
+function resizeWindow(width, height) {
+  const [w, h] = winState.size;
+  winState.size = [width ? width : w, height ? height : h];
+  const [nw, nh] = winState.size;
+  window.electronAPI?.resizeWindow(nw, nh);
+  saveWindowState();
+}
 
 function saveWindowState() {
   localStorage.setItem("win_state", JSON.stringify(winState));
@@ -27,8 +40,10 @@ function loadWindowState() {
       ...JSON.parse(state),
     };
   }
+  const [sx, sy] = winState.size;
   const [dx, dy] = winState.position;
   window.electronAPI?.setPosition(dx, dy);
+  window.electronAPI?.resizeWindow(sx, sy);
 }
 
 function generateBar(user) {
@@ -95,7 +110,7 @@ async function fetchUsers() {
       return {
         id: id.toString(),
         rank: rank + 1,
-        name: user.name,
+        name: user.name ? user.name : `#${id}`,
         role: user.role,
         profession: user.profession,
 
@@ -109,15 +124,9 @@ async function fetchUsers() {
 
   if (userUid) {
     const idx = list.findIndex((u) => u.id === userUid);
-    if (idx !== -1) {
-      if (idx < 20) {
-        return list.slice(0, 20);
-      } else {
-        const k = list.slice(0, 19);
-        k.push(list[idx]);
-        return k;
-      }
-    }
+    const nList = list.slice(0, 20);
+    if (idx !== -1 && 20 <= idx) nList.push(list[idx]);
+    return nList;
   }
 
   return list.slice(0, 20);
@@ -167,13 +176,13 @@ async function fetchAndRender() {
   }
 
   if (currentLogIdx !== -1) return;
-  renderTable(users, 5);
+  renderTable(users, playerLimit);
 }
 
 const loadLogAndRender = () => {
   if (currentLogIdx === -1) return;
   const data = logsList[currentLogIdx];
-  renderTable(data.data, 5);
+  renderTable(data.data, playerLimit);
 };
 
 const renderTable = (users, limit) => {
@@ -193,6 +202,8 @@ const renderTable = (users, limit) => {
     if (!above) {
       const user = users.find((u) => u.id === userUid);
       elDpsTableUser.innerHTML = user ? generateBar(user) : "";
+    } else {
+      elDpsTableUser.innerHTML = "";
     }
   }
 };
@@ -212,9 +223,57 @@ window.addEventListener("DOMContentLoaded", (_) => {
     winState.position = pos;
     saveWindowState();
   });
+  electron?.onLock((locked) => {
+    document.body.classList.toggle("locked", locked);
+  });
 
   elCloseBtn.addEventListener("click", () => electron?.closeWindow());
   elResetBtn.addEventListener("click", () => clear());
+  elSwapBtn.addEventListener(
+    "click",
+    () => (playerLimit = playerLimit === 5 ? 20 : 5)
+  );
+  if (elDragBtn) {
+    let isResizing = false;
+    let mouseStartX = 0;
+    let mouseStartY = 0;
+    let startWinX = 0;
+    let startWinY = 0;
+
+    const startResize = (e) => {
+      isResizing = true;
+      mouseStartX = e.pageX;
+      mouseStartY = e.pageY;
+      startWinX = window.innerWidth;
+      startWinY = window.innerHeight;
+      document.body.style.cursor = "nwse-resize";
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const doResize = (e) => {
+      if (!isResizing) return;
+      const deltaX = e.pageX - mouseStartX;
+      const deltaY = e.pageY - mouseStartY;
+      const newX = startWinX + deltaX;
+      const newY = startWinY + deltaY;
+      resizeWindow(
+        Math.floor(Math.max(WIN_MIN_SIZE[0], newX)),
+        Math.floor(Math.max(WIN_MIN_SIZE[1], newY))
+      );
+    };
+
+    const stopResize = () => {
+      if (isResizing) {
+        isResizing = false;
+        document.body.style.cursor = "";
+      }
+    };
+
+    elDragBtn.addEventListener("mousedown", startResize);
+    window.addEventListener("mousemove", doResize);
+    window.addEventListener("mouseup", stopResize);
+  }
   elDpsLogs.onchange = async function () {
     if (this.value === "") {
       currentLogIdx = -1;
@@ -226,7 +285,7 @@ window.addEventListener("DOMContentLoaded", (_) => {
   };
 
   setInterval(renderLogOptions, 1000);
-  setInterval(fetchAndRender, 1050);
+  setInterval(fetchAndRender, 50);
   renderLogOptions();
   fetchAndRender();
 });
