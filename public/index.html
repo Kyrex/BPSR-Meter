@@ -1,46 +1,166 @@
-<!DOCTYPE html>
-<html lang="es-ES">
+<!doctype html>
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medidor DPS</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Jura:wght@300..700&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
+  <title>DPS METER</title>
+  <meta charset="UTF-8" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Jura:wght@300..700&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+  />
+  <style>
+    body {
+      margin: 0;
+      padding: 8px;
+
+      color: #eee;
+      font-family: "Jura", sans-serif;
+      font-optical-sizing: auto;
+      font-weight: normal;
+      font-style: normal;
+      overflow: hidden;
+      user-select: none;
+    }
+    .dps-window {
+      border-radius: 4px;
+      background-color: #2226;
+      display: flex;
+      align-items: center;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #dps-content > .dps-window:nth-child(1) {
+      margin-bottom: 4px;
+    }
+
+    #dps-header {
+      height: 28px;
+      border-bottom: 1px solid #eee4;
+    }
+
+    #dps-timer {
+      padding-left: 8px;
+    }
+
+    .dps-flex-row {
+      width: 100%;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      flex-direction: row;
+      gap: 8px;
+      padding: 0px 8px;
+    }
+
+    .st-spacer {
+      flex: 1;
+    }
+
+    #dps-spinner {
+      padding: 8px;
+      animation: spin 1.5s linear infinite;
+    }
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    #reset-button:hover {
+      color: #04a;
+      cursor: pointer;
+    }
+
+    #close-button:hover {
+      color: #a00;
+      cursor: pointer;
+    }
+
+    .dps-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .dps-table tr {
+      height: 32px;
+      position: relative;
+      border-bottom: 1px solid #eee4;
+    }
+    .dps-table tr:last-child {
+      border-bottom: none;
+    }
+    .dps-table tr::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: var(--p);
+      height: 100%;
+      background: var(--c);
+      z-index: 0;
+    }
+    .dps-table td {
+      z-index: 1;
+      position: relative;
+      text-align: center;
+    }
+    .dps-table td:nth-child(3) {
+      text-align: start;
+    }
+    .st-sublabel {
+      color: #eee6;
+      font-size: 8pt;
+    }
+
+    select {
+      font-family: "Jura", sans-serif;
+      font-optical-sizing: auto;
+      font-weight: normal;
+      font-style: normal;
+      color: #eee;
+
+      appearance: none;
+      height: 100%;
+      border: none;
+      background: none;
+    }
+
+    select option {
+      background-color: #222;
+    }
+
+    :focus {
+      outline: none;
+    }
+  </style>
 </head>
 <body>
-<div class="dps-meter">
-        <header id="header" class="controls" style="width: 100%;">
-            <div style="position: relative; width: 32px; height: 32px; margin-right: 8px">
-                <img src="icon.png" alt="Logo" style="height: 32px; position: absolute; top: 0; left: 0;">
-                <div class="sync-button" id="sync-button" style="position: absolute; top: 1.5px; left: 1.5px; z-index: 11;">
-                    <i class="fa-solid fa-arrows-rotate sync-icon"></i>
-                    <span class="sync-timer"></span>
-                </div>
-                <div id="drag-indicator" class="drag-indicator"></div>
-            </div>
-            <button class="control-button" id="reset-button"><i class="fa-solid fa-arrows-rotate"></i></button>
-            <button class="control-button fa-solid fa-minus" id="zoom-out-button"></button>
-            <button class="control-button fa-solid fa-plus" id="zoom-in-button"></button>
-            <button class="control-button advanced-lite-btn" id="advanced-lite-btn">Adv.</button>
-            <button class="control-button fa-solid" id="lite-dps-healer-btn" style="display:none;">DPS</button>
-            <div style="flex: 1;"></div>
-            <button class="control-button fa-solid fa-xmark" id="close-button"></button>
-        </header>
-        <div style="display: flex; flex-direction:column; gap:6px; margin-top: 4px;">
-            <div id="encounters-section"></div>
-        </div>
-        <div id="loading-indicator" style="margin-top: 12px;">
-            <i class="fa-solid fa-spinner fa-spin"></i>
-        </div>
-        <main id="player-bars-container" style="margin-top: 4px; display: none;"></main>
-        <div class="resize-handle" id="resize-handle">
-            <i class="fa-solid fa-grip-lines"></i>
-        </div>
+  <div id="dps-content">
+    <div class="dps-window">
+      <div id="dps-header" class="dps-flex-row">
+        <i style="-webkit-app-region: drag; padding-right: 40px">
+          <i class="fa-regular fa-clock" style="-webkit-app-region: drag"></i>
+          DPS
+        </i>
+        <i id="reset-button" class="fa-solid fa-arrows-rotate"></i>
+        <select id="dps-logs" class="st-spacer"></select>
+        <i id="close-button" class="fa-solid fa-xmark"></i>
+      </div>
+      <i id="dps-spinner" class="fa-solid fa-spinner"></i>
+      <table id="dps-table" class="dps-table"></table>
     </div>
-
-    <script src="js/main.js"></script>
+    <div class="dps-window">
+      <table id="dps-table-user" class="dps-table"></table>
+    </div>
+  </div>
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
 </body>
-</html>
