@@ -8,32 +8,44 @@ const elDpsTableUser = document.getElementById("dps-table-user");
 const elDpsTimer = document.getElementById("dps-timer");
 const elDpsLogs = document.getElementById("dps-logs");
 
-const WIN_MIN_SIZE = [380, 200];
+const MAX_LOGS = 5;
+const MAX_PLAYERS_0 = 5;
+const MAX_PLAYERS_1 = 20;
+const HEADER_HEIGHT = 28;
+const LITE_BAR_HEIGHT = 35;
+const ADVC_BAR_HEIGHT = 48;
+const WIN_STATE_KEY = "win_state";
+const WIN_MIN_SIZE = [380, HEADER_HEIGHT + MAX_PLAYERS_0 * LITE_BAR_HEIGHT];
+
 let logsList = new Array();
 let userUid;
 let startTime;
-let playerLimit = 5;
+let playerLimit = MAX_PLAYERS_0;
 let currentLogIdx = -1;
 let latestUsersList;
 let winState = {
   size: WIN_MIN_SIZE,
   position: [0, 0],
+  isLiteMode: true,
 };
 
 function resizeWindow(width, height) {
   const [w, h] = winState.size;
-  winState.size = [width ? width : w, height ? height : h];
+  winState.size = [
+    Math.max(WIN_MIN_SIZE[0], width ? width : w),
+    Math.max(WIN_MIN_SIZE[1], height ? height : h),
+  ];
   const [nw, nh] = winState.size;
   window.electronAPI?.resizeWindow(nw, nh);
   saveWindowState();
 }
 
 function saveWindowState() {
-  localStorage.setItem("win_state", JSON.stringify(winState));
+  localStorage.setItem(WIN_STATE_KEY, JSON.stringify(winState));
 }
 
 function loadWindowState() {
-  const state = localStorage.getItem("win_state");
+  const state = localStorage.getItem(WIN_STATE_KEY);
   if (state) {
     winState = {
       ...winState,
@@ -57,28 +69,36 @@ function generateBar(user) {
 
   const [main, spec] = getUserProfessions(user);
   const icon = spec?.icon || main.icon;
+  const points = formatValue(user.fight_points);
 
-  return `
+  if (winState.isLiteMode) {
+    return `
     <tr style="--p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent)">
-        <td style="width: 40px">${rank}</td>
-        <td style="width: 32px; height:32px">
-            <img
-            src="${icon}"
-            style="width: 28px; height: 28px"
-            />
-        </td>
-        <td style="width: 100%">${name}</td>
-        <td style="width: 60px">
-            ${dmg}<span class="st-sublabel"></span>
-        </td>
-        <td style="width: 60px">
-            ${dps}<span class="st-sublabel">/s</span>
-        </td>
-        <td style="width: 50px">
-            ${percent}<span class="st-sublabel">%</span>
-        </td>
+      <td style="width: 40px">${rank}</td>
+      <td style="width: 32px; height:32px">
+        <img src="${icon}" style="width: 28px; height: 28px"/>
+      </td>
+      <td style="width: 100%" class="td-left">${name}</td>
+      <td style="width: 60px">${dmg}<span class="st-sublabel"></span></td>
+      <td style="width: 60px">${dps}<span class="st-sublabel">/s</span></td>
+      <td style="width: 50px">${percent}<span class="st-sublabel">%</span></td>
     </tr>
     `;
+  }
+
+  return `
+  <tr style="height: 48px; --p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent)">
+    <td style="width: 40px">${rank}</td>
+    <td style="width: 32px; height:32px">
+      <img src="${icon}" style="width: 28px; height: 28px"/>
+    </td>
+    <td style="width: 100%" class="td-left">${name}</td>
+    <td style="width: 60px">${points}</td>
+    <td style="width: 60px">${dmg}<span class="st-sublabel"></span></td>
+    <td style="width: 60px">${dps}<span class="st-sublabel">/s</span></td>
+    <td style="width: 50px">${percent}<span class="st-sublabel">%</span></td>
+  </tr>
+  `;
 }
 
 let emptyTimer = Date.now();
@@ -119,17 +139,18 @@ async function fetchUsers() {
         total_dmg_perc: totalPerc,
 
         bar_percent: barPerc,
+        fight_points: user.fightPoint,
       };
     });
 
   if (userUid) {
     const idx = list.findIndex((u) => u.id === userUid);
-    const nList = list.slice(0, 20);
-    if (idx !== -1 && 20 <= idx) nList.push(list[idx]);
+    const nList = list.slice(0, MAX_PLAYERS_1);
+    if (idx !== -1 && MAX_PLAYERS_1 <= idx) nList.push(list[idx]);
     return nList;
   }
 
-  return list.slice(0, 20);
+  return list.slice(0, MAX_PLAYERS_1);
 }
 
 const clear = () => {
@@ -145,7 +166,7 @@ const saveLog = () => {
     data: latestUsersList,
     total_damage: latestUsersList.reduce((a, u) => a + u.total_dmg, 0),
   });
-  logsList = logsList.slice(0, 5);
+  logsList = logsList.slice(0, MAX_LOGS);
   latestUsersList = null;
   currentLogIdx = -1;
   startTime = null;
@@ -230,8 +251,11 @@ window.addEventListener("DOMContentLoaded", (_) => {
   elCloseBtn.addEventListener("click", () => electron?.closeWindow());
   elResetBtn.addEventListener("click", () => clear());
   elSwapBtn.addEventListener("click", () => {
-    playerLimit = playerLimit === 5 ? 20 : 5;
+    playerLimit = playerLimit === MAX_PLAYERS_0 ? MAX_PLAYERS_1 : MAX_PLAYERS_0;
     elSwapBtn.innerHTML = `${playerLimit}P`;
+    const barHeight = winState.isLiteMode ? LITE_BAR_HEIGHT : ADVC_BAR_HEIGHT;
+    const extraHeight = userUid ? 4 + barHeight : 0;
+    resizeWindow(null, HEADER_HEIGHT + playerLimit * barHeight + extraHeight);
   });
   if (elDragBtn) {
     let isResizing = false;
@@ -257,17 +281,13 @@ window.addEventListener("DOMContentLoaded", (_) => {
       const deltaY = e.pageY - mouseStartY;
       const newX = startWinX + deltaX;
       const newY = startWinY + deltaY;
-      resizeWindow(
-        Math.floor(Math.max(WIN_MIN_SIZE[0], newX)),
-        Math.floor(Math.max(WIN_MIN_SIZE[1], newY))
-      );
+      resizeWindow(newX, newY);
     };
 
     const stopResize = () => {
-      if (isResizing) {
-        isResizing = false;
-        document.body.style.cursor = "";
-      }
+      if (!isResizing) return;
+      isResizing = false;
+      document.body.style.cursor = "";
     };
 
     elDragBtn.addEventListener("mousedown", startResize);

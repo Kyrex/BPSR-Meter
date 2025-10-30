@@ -16,7 +16,7 @@
   <style>
     body {
       margin: 0;
-      padding: 8px;
+      padding: 0;
 
       color: #eee;
       font-family: "Jura", sans-serif;
@@ -28,6 +28,12 @@
     }
     body.locked #drag-button {
       display: none;
+    }
+    #drag-button {
+      z-index: 100;
+    }
+    #drag-button:hover {
+      cursor: nwse-resize;
     }
     .dps-window {
       border-radius: 4px;
@@ -120,7 +126,7 @@
       position: relative;
       text-align: center;
     }
-    .dps-table td:nth-child(3) {
+    .dps-table td.td-left {
       text-align: start;
     }
     .st-sublabel {
@@ -154,7 +160,7 @@
   <div id="dps-content">
     <div class="dps-window">
       <div id="dps-header" class="dps-flex-row">
-        <i style="-webkit-app-region: drag; padding-right: 40px">
+        <i style="-webkit-app-region: drag; width: 64px">
           <i class="fa-regular fa-clock" style="-webkit-app-region: drag"></i>
           DPS
         </i>
