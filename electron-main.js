@@ -1,8 +1,7 @@
 const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const { exec, fork } = require("child_process");
-const net = require("net"); // Necesario para checkPort
-const fs = require("fs");
+const net = require("net");
 
 let mainWindow;
 let serverProcess;
@@ -27,9 +26,7 @@ const checkPort = (port) => {
   return new Promise((resolve) => {
     const server = net.createServer();
     server.once("error", () => resolve(false));
-    server.once("listening", () => {
-      server.close(() => resolve(true));
-    });
+    server.once("listening", () => server.close(() => resolve(true)));
     server.listen(port);
   });
 };
@@ -141,7 +138,6 @@ async function createWindow() {
   console.log(`Opening server.js at ${serverPath}:${serverPort}`);
 
   // Usar fork para lanzar el servidor como proceso hijo
-  const { fork } = require("child_process");
   serverProcess = fork(serverPath, [serverPort], {
     stdio: ["pipe", "pipe", "pipe", "ipc"],
     execArgv: [],

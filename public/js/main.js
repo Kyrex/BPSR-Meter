@@ -68,15 +68,20 @@ function generateBar(user) {
   const barPercent = user.bar_percent;
 
   const [main, spec] = getUserProfessions(user);
-  const icon = spec?.icon || main.icon;
-  const points = formatValue(user.fight_points);
+  const iconSpec = spec?.icon || main.icon;
+  const iconClass = main.icon;
 
-  if (winState.isLiteMode) {
+  if (winState.isLiteMode && true) {
     return `
     <tr style="--p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent)">
-      <td style="width: 40px">${rank}</td>
-      <td style="width: 32px; height:32px">
-        <img src="${icon}" style="width: 28px; height: 28px"/>
+      <td style="width: 32px">
+        <div class="dps-rank">
+          <img src="${iconSpec}"/>
+          <span>${rank}</span>
+        </div>
+      </td>
+      <td style="width: 28px">
+        <img src="${iconClass}" style="width: 20px; height: 20px; vertical-align: middle; translate: -4px 0"/>
       </td>
       <td style="width: 100%" class="td-left">${name}</td>
       <td style="width: 60px">${dmg}<span class="st-sublabel"></span></td>
@@ -86,25 +91,25 @@ function generateBar(user) {
     `;
   }
 
+  const points = formatValue(user.fight_points);
   return `
   <tr style="height: 48px; --p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent)">
     <td style="width: 40px">${rank}</td>
     <td style="width: 32px; height:32px">
-      <img src="${icon}" style="width: 28px; height: 28px"/>
+      <img src="${iconSpec}" style="width: 28px; height: 28px"/>
     </td>
     <td style="width: 100%" class="td-left">${name}</td>
-    <td style="width: 60px">${points}</td>
     <td style="width: 60px">${dmg}<span class="st-sublabel"></span></td>
-    <td style="width: 60px">${dps}<span class="st-sublabel">/s</span></td>
+    <td style="width: 100px" class="td-right">
+      <div>${dps}<span class="st-sublabel">/s DPS</span></div>
+      <div>${0}<span class="st-sublabel">/s HPS</span></div>
+    </td>
     <td style="width: 50px">${percent}<span class="st-sublabel">%</span></td>
   </tr>
   `;
 }
 
-let emptyTimer = Date.now();
 async function fetchUsers() {
-  // if (emptyTimer && Date.now() - emptyTimer < 5000) return [];
-  // const data = getDebugUserData(150);
   const data = await fetch("/api/data").then((res) => res.json());
 
   const percent = (v, max) =>
@@ -155,7 +160,6 @@ async function fetchUsers() {
 
 const clear = () => {
   fetch("/api/clear");
-  emptyTimer = Date.now();
 };
 
 const saveLog = () => {

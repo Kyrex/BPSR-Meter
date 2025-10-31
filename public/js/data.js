@@ -1,117 +1,106 @@
 const professionMap = {
-  // Main roles
   雷影剑士: {
     name: "Stormblade",
     icon: "icons/class_stormblade.webp",
     role: "dps",
   },
+  居合: {
+    name: "laido Slash",
+    icon: "icons/spec_slash.webp",
+    role: "dps",
+  },
+  月刃: {
+    name: "Moonstrike",
+    icon: "icons/spec_moon.webp",
+    role: "dps",
+  },
+
   冰魔导师: {
     name: "Frost Mage",
     icon: "icons/class_frost_mage.webp",
     role: "dps",
   },
+  冰矛: { name: "Icicle", icon: "icons/spec_icicle.webp", role: "dps" },
+  射线: { name: "Frostbeam", icon: "icons/spec_frostbeam.webp", role: "dps" },
+
   青岚骑士: {
     name: "Wind Knight",
     icon: "icons/class_wind_knight.webp",
     role: "dps",
   },
-  森语者: {
-    name: "Verdant Oracle",
-    icon: "icons/class_verdant_oracle.webp",
-    role: "healer",
+  空枪: {
+    name: "Skyward",
+    icon: "icons/spec_skyward.webp",
+    role: "dps",
   },
+  重装: {
+    name: "Vanguard",
+    icon: "icons/spec_vanguard.webp",
+    role: "dps",
+  },
+
   巨刃守护者: {
     name: "Heavy Guardian",
     icon: "icons/class_heavy_guardian.webp",
     role: "tank",
   },
+  防盾: {
+    name: "Recovery",
+    icon: "icons/spec_recovery.webp",
+    role: "tank",
+  },
+  岩盾: {
+    name: "Earthfort",
+    icon: "icons/spec_earth.webp",
+    role: "tank",
+  },
+
+  森语者: {
+    name: "Verdant Oracle",
+    icon: "icons/class_verdant_oracle.webp",
+    role: "healer",
+  },
+  惩戒: {
+    name: "Smite",
+    icon: "icons/spec_smite.webp",
+    role: "healer",
+  },
+  愈合: {
+    name: "Lifebind",
+    icon: "icons/spec_lifebind.webp",
+    role: "healer",
+  },
+
   神射手: { name: "Marksman", icon: "icons/class_marksman.webp", role: "dps" },
+  狼弓: { name: "Wildpack", icon: "icons/spec_wildpack.webp", role: "dps" },
+  鹰弓: { name: "Falconry", icon: "icons/spec_falcon.webp", role: "dps" },
+
   神盾骑士: {
     name: "Shield Knight",
     icon: "icons/class_shield_knight.webp",
     role: "tank",
   },
+  格挡: { name: "Block", icon: "icons/spec_recovery.webp", role: "tank" },
+  光盾: {
+    name: "Shield",
+    icon: "icons/spec_shield.webp",
+    role: "tank",
+  },
+
   灵魂乐手: {
     name: "Soul Musician",
     icon: "icons/class_soul_musician.webp",
     role: "healer",
   },
-  "涤罪恶火·战斧": {
-    name: "Fire Axe",
-    icon: "icons/missing_icon.png",
-    role: "dps",
-  },
-  "雷霆一闪·手炮": {
-    name: "Gunner",
-    icon: "icons/missing_icon.png",
-    role: "dps",
-  },
-  "暗灵祈舞·仪刀/仪仗": {
-    name: "Spirit Dancer",
-    icon: "icons/missing_icon.png",
-    role: "dps",
-  },
-
-  // Spec roles
-  居合: {
-    name: "laido Slash",
-    icon: "icons/class_stormblade.webp",
-    role: "dps",
-  },
-  月刃: {
-    name: "MoonStrike",
-    icon: "icons/class_stormblade.webp",
-    role: "dps",
-  },
-  冰矛: { name: "Icicle", icon: "icons/class_frost_mage.webp", role: "dps" },
-  射线: { name: "Frostbeam", icon: "icons/class_frost_mage.webp", role: "dps" },
-  防盾: {
-    name: "Vanguard",
-    icon: "icons/class_shield_knight.webp",
-    role: "tank",
-  },
-  岩盾: {
-    name: "Skyward",
-    icon: "icons/class_heavy_guardian.webp",
-    role: "tank",
-  },
-  惩戒: {
-    name: "Smite",
-    icon: "icons/class_verdant_oracle.webp",
-    role: "healer",
-  },
-  愈合: {
-    name: "Lifebind",
-    icon: "icons/class_verdant_oracle.webp",
-    role: "healer",
-  },
-  格挡: { name: "Block", icon: "icons/class_shield_knight.webp", role: "tank" },
-  狼弓: { name: "Wildpack", icon: "icons/class_marksman.webp", role: "dps" },
-  鹰弓: { name: "Falconry", icon: "icons/class_marksman.webp", role: "dps" },
-  光盾: {
-    name: "Shield",
-    icon: "icons/class_shield_knight.webp",
-    role: "tank",
-  },
   协奏: {
     name: "Concerto",
-    icon: "icons/class_soul_musician.webp",
+    icon: "icons/spec_concerto.webp",
     role: "healer",
   },
   狂音: {
     name: "Dissonance",
-    icon: "icons/class_soul_musician.webp",
+    icon: "icons/spec_diss.webp",
     role: "healer",
-  },
-  空枪: {
-    name: "Empty Gun",
-    icon: "icons/class_wind_knight.webp",
-    role: "dps",
-  },
-  重装: {
-    name: "Heavy Armor",
-    icon: "icons/class_wind_knight.webp",
-    role: "dps",
   },
 };
 
@@ -174,65 +163,28 @@ function getUserColor(user, userUid) {
   return roleColors[role] || "#222";
 }
 
+function getClassFromSpec(spec) {
+  if (spec === "居合" || spec === "月刃") return "雷影剑士";
+  if (spec === "冰矛" || spec === "射线") return "冰魔导师";
+  if (spec === "空枪" || spec === "重装") return "青岚骑士";
+  if (spec === "惩戒" || spec === "愈合") return "森语者";
+  if (spec === "防盾" || spec === "岩盾") return "巨刃守护者";
+  if (spec === "狼弓" || spec === "鹰弓") return "神射手";
+  if (spec === "光盾" || spec === "格挡") return "神盾骑士";
+  if (spec === "协奏" || spec === "狂音") return "灵魂乐手";
+  return "";
+}
+
 function getUserProfessions(user) {
   const parts = user.profession.split("-");
-  const mainProf = professionMap[parts[0]] || defaultProfession;
   const specProf = professionMap[parts[1]];
+  const mainProf =
+    professionMap[parts[0]] ||
+    professionMap[getClassFromSpec(parts[1])] ||
+    defaultProfession;
   return [mainProf, specProf];
 }
 
 const clamp = (value, min, max) => {
   return Math.max(min, Math.min(max, value));
 };
-
-function getDebugUserData(users) {
-  const userData = { user: {} };
-
-  const roles = Object.keys(professionMap).slice(0, 10);
-  const subRoles = Object.keys(professionMap).slice(10);
-  for (var i = 0; i < users; ++i) {
-    const max_hp = Math.random() * 10000;
-    const hp = Math.random() * max_hp;
-    const role =
-      roles[Math.floor((Math.random() * roles.length) % roles.length)];
-    const subRole =
-      subRoles[Math.floor((Math.random() * subRoles.length) % subRoles.length)];
-    const user = {
-      name: `User #${i}`, //
-      realtime_dps: 0,
-      realtime_dps_max: Math.random() * 3000,
-      total_dps: Math.random() * 1000,
-      total_damage: {
-        normal: 9411,
-        critical: 246,
-        lucky: 732,
-        crit_lucky: 0,
-        hpLessen: 8956,
-        total: Math.random() * 1000,
-      },
-      total_count: {
-        normal: 76,
-        critical: 5,
-        lucky: 1,
-        total: 82,
-      },
-      realtime_hps: 4017,
-      realtime_hps_max: 11810,
-      total_hps: 4497.79970662755,
-      total_healing: {
-        normal: 115924,
-        critical: 18992,
-        lucky: 0,
-        crit_lucky: 0,
-        hpLessen: 0,
-        total: 134916,
-      },
-      hp: hp,
-      max_hp: max_hp,
-      taken_damage: 65,
-      profession: `${role}-${subRole}`, // "愈合"
-    };
-    userData.user[`user_${i}`] = user;
-  }
-  return userData;
-}

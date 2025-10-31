@@ -43,9 +43,6 @@
       flex-direction: column;
       overflow: hidden;
     }
-    #dps-content > .dps-window:nth-child(1) {
-      margin-bottom: 4px;
-    }
 
     #dps-header {
       height: 28px;
@@ -83,17 +80,17 @@
       }
     }
 
-    #swap-button:hover {
+    body:not(.locked) #swap-button:hover {
       color: #0a4;
       cursor: pointer;
     }
 
-    #reset-button:hover {
+    body:not(.locked) #reset-button:hover {
       color: #04a;
       cursor: pointer;
     }
 
-    #close-button:hover {
+    body:not(.locked) #close-button:hover {
       color: #a00;
       cursor: pointer;
     }
@@ -104,12 +101,12 @@
       table-layout: fixed;
     }
     .dps-table tr {
-      height: 32px;
+      height: 35px;
       position: relative;
-      border-bottom: 1px solid #eee4;
+      box-shadow: inset 0 -1px 0 0 #eee2;
     }
     .dps-table tr:last-child {
-      border-bottom: none;
+      box-shadow: none;
     }
     .dps-table tr::before {
       content: "";
@@ -128,6 +125,12 @@
     }
     .dps-table td.td-left {
       text-align: start;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .dps-table td.td-right {
+      text-align: end;
     }
     .st-sublabel {
       color: #eee6;
@@ -154,27 +157,65 @@
     :focus {
       outline: none;
     }
+
+    .dps-div-col {
+      gap: 4px;
+      display: flex;
+      flex-direction: column;
+    }
+    .dps-div-row {
+      gap: 4px;
+      display: flex;
+      flex-direction: row;
+    }
+
+    .dps-rank {
+      position: relative;
+    }
+    .dps-rank img {
+      width: 28px;
+      height: 28px;
+      opacity: 0.25;
+      vertical-align: middle;
+    }
+    .dps-rank span {
+      position: absolute;
+      top: 0px;
+      left: 2px;
+      width: 28px;
+      height: 24px;
+      padding-top: 4px;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px black;
+      text-align: center;
+      vertical-align: middle;
+    }
   </style>
 </head>
 <body>
-  <div id="dps-content">
-    <div class="dps-window">
-      <div id="dps-header" class="dps-flex-row">
-        <i style="-webkit-app-region: drag; width: 64px">
-          <i class="fa-regular fa-clock" style="-webkit-app-region: drag"></i>
-          DPS
-        </i>
-        <i id="swap-button" style="width: 30px; text-align: end">5P</i>
-        <i id="reset-button" class="fa-solid fa-arrows-rotate"></i>
-        <select id="dps-logs" class="st-spacer"></select>
-        <i id="close-button" class="fa-solid fa-xmark"></i>
+  <div class="dps-div-row">
+    <div id="dps-content" class="dps-div-col">
+      <div class="dps-window">
+        <div id="dps-header" class="dps-flex-row">
+          <i style="-webkit-app-region: drag; width: 64px">
+            <i class="fa-regular fa-clock" style="-webkit-app-region: drag"></i>
+            DPS
+          </i>
+          <i id="swap-button" style="width: 30px; text-align: end">5P</i>
+          <i id="reset-button" class="fa-solid fa-arrows-rotate"></i>
+          <select id="dps-logs" class="st-spacer"></select>
+          <i id="close-button" class="fa-solid fa-xmark"></i>
+        </div>
+        <i id="dps-spinner" class="fa-solid fa-spinner"></i>
+        <table id="dps-table" class="dps-table"></table>
       </div>
-      <i id="dps-spinner" class="fa-solid fa-spinner"></i>
-      <table id="dps-table" class="dps-table"></table>
+      <div class="dps-window">
+        <table id="dps-table-user" class="dps-table"></table>
+      </div>
     </div>
-    <div class="dps-window">
-      <table id="dps-table-user" class="dps-table"></table>
-    </div>
+    <!--div id="dps-detailed">
+      <div class="dps-window" style="padding: 8px">TODO</div>
+    </div-->
   </div>
   <i
     id="drag-button"
@@ -182,11 +223,10 @@
       position: absolute;
       right: 0;
       bottom: 0;
-      rotate: 45deg;
-      font-size: 8pt;
-      color: #eee4;
+      width: 12px;
+      height: 12px;
+      background: linear-gradient(135deg, transparent 50%, #eee2 50%);
     "
-    class="fa-solid fa-play"
   ></i>
   <script src="js/data.js"></script>
   <script src="js/main.js"></script>
