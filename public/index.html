@@ -1,56 +1,248 @@
-<!DOCTYPE html>
-<html lang="es-ES">
+<!doctype html>
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medidor DPS</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
+  <title>DPS METER</title>
+  <meta charset="UTF-8" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Jura:wght@300..700&display=swap"
+    rel="stylesheet"
+  />
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"
+  />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+
+      color: #eee;
+      font-family: "Jura", sans-serif;
+      font-optical-sizing: auto;
+      font-weight: normal;
+      font-style: normal;
+      overflow: hidden;
+      user-select: none;
+    }
+    body.locked #drag-button {
+      display: none;
+    }
+    #drag-button {
+      z-index: 100;
+    }
+    #drag-button:hover {
+      cursor: nwse-resize;
+    }
+    .dps-window {
+      border-radius: 4px;
+      background-color: #2226;
+      display: flex;
+      align-items: center;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #dps-header {
+      height: 28px;
+      border-bottom: 1px solid #eee4;
+    }
+
+    #dps-timer {
+      padding-left: 8px;
+    }
+
+    .dps-flex-row {
+      width: 100%;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      flex-direction: row;
+      gap: 8px;
+      padding: 0px 8px;
+    }
+
+    .dps-title {
+      -webkit-app-region: drag;
+      width: 64px;
+      border-right: 1px solid #eee4;
+      text-align: center;
+      padding-right: 8px;
+    }
+
+    .st-spacer {
+      flex: 1;
+    }
+
+    #dps-spinner {
+      padding: 8px;
+      animation: spin 1.5s linear infinite;
+    }
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    body:not(.locked) #swap-button:hover {
+      color: #0a4;
+      cursor: pointer;
+    }
+
+    body:not(.locked) #reset-button:hover {
+      color: #04a;
+      cursor: pointer;
+    }
+
+    body:not(.locked) #close-button:hover {
+      color: #a00;
+      cursor: pointer;
+    }
+
+    #stats-button {
+      opacity: 0.8;
+    }
+
+    body:not(.locked) #stats-button:hover {
+      opacity: 1;
+      cursor: pointer;
+    }
+
+    .dps-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+    }
+    .dps-table tr {
+      height: 35px;
+      position: relative;
+      box-shadow: inset 0 -1px 0 0 #eee2;
+    }
+    .dps-table tr:last-child {
+      box-shadow: none;
+    }
+    .dps-table tr::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: var(--p);
+      height: 100%;
+      background: var(--c);
+      z-index: 0;
+    }
+    .dps-table td {
+      z-index: 1;
+      position: relative;
+      text-align: center;
+    }
+    .dps-table td.td-left {
+      text-align: start;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+    .dps-table td.td-right {
+      text-align: end;
+    }
+    .st-sublabel {
+      color: #eee6;
+      font-size: 8pt;
+    }
+
+    select {
+      font-family: "Jura", sans-serif;
+      font-optical-sizing: auto;
+      font-weight: normal;
+      font-style: normal;
+      color: #eee;
+
+      appearance: none;
+      height: 100%;
+      border: none;
+      background: none;
+    }
+
+    select option {
+      background-color: #222;
+    }
+
+    :focus {
+      outline: none;
+    }
+
+    .dps-div-col {
+      gap: 4px;
+      display: flex;
+      flex-direction: column;
+    }
+    .dps-div-row {
+      gap: 4px;
+      display: flex;
+      flex-direction: row;
+    }
+
+    .dps-rank {
+      position: relative;
+    }
+    .dps-rank img {
+      width: 28px;
+      height: 28px;
+      opacity: 0.25;
+      vertical-align: middle;
+    }
+    .dps-rank span {
+      position: absolute;
+      top: 0px;
+      left: 2px;
+      width: 28px;
+      height: 24px;
+      padding-top: 4px;
+      font-weight: bold;
+      text-shadow: 1px 1px 2px black;
+      text-align: center;
+      vertical-align: middle;
+    }
+  </style>
 </head>
 <body>
-<div class="dps-meter">
-        <header class="controls" style="width: 100%;">
-            <div style="position: relative; width: 32px; height: 32px; margin-right: 10px;"> <!-- Contenedor para el icono y el botón de sincronización -->
-                <img src="icon.png" alt="Logo" style="height: 32px; position: absolute; top: 0; left: 0;">
-                <div class="sync-button" id="sync-button" style="position: absolute; top: 1.5px; left: 1.5px; z-index: 11;"> <!-- Centrado sobre el icono -->
-                    <i class="fa-solid fa-arrows-rotate sync-icon"></i>
-                    <span class="sync-timer"></span>
-                </div>
-            </div>
-            <button class="control-button" id="reset-button" title="Reset" style="display: none;"><i class="fa-solid fa-arrows-rotate"></i></button>
-            <div id="dps-timer-btns" class="dps-timer-buttons" style="flex-grow: 1; justify-content: flex-end; display: none;">
-            </div>
-            <button class="control-button" id="zoom-in-button" title="Aumentar tamaño"><i class="fa-solid fa-plus"></i></button>
-            <!-- Botón de mover ventana (drag) -->
-            <div class="drag-indicator" id="drag-indicator" title="Mover ventana">
-                <i class="fa-solid fa-up-down-left-right"></i>
-            </div>
-            <button class="control-button" id="zoom-out-button" title="Reducir tamaño"><i class="fa-solid fa-minus"></i></button>
-            <!-- Botón Advanced/Lite -->
-        <button class="control-button advanced-lite-btn" id="advanced-lite-btn" title="Toggle Advanced/Lite">Advanced</button>
-        <!-- Botón DPS/Healer solo visible en modo Lite -->
-        <button class="control-button advanced-lite-btn" id="lite-dps-healer-btn" style="display:none;">DPS</button>
-            <!-- Botón de bloqueo/desbloqueo -->
-            <button class="control-button" id="lock-button" title="Bloquear posición" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-lock-open"></i></button>
-            <button class="control-button" id="close-button" title="Cerrar ventana" style="width: 32px; height: 32px; font-size: 0.9rem; margin-top: 0;"><i class="fa-solid fa-xmark"></i></button>
-        </header>
-        <div style="display:flex; flex-direction:column; gap:6px; margin-bottom:10px;">
-            <div id="dps-timer" style="text-align:center;font-size:1.2rem;font-weight:700;margin-top:4px;min-height:28px;color:#e0e0e0;display:none; text-shadow: var(--text-shadow);"></div>
-            <div id="encounters-section" style="margin-top:8px;"></div>
-            <div id="logs-section" style="margin-top:8px;"></div>
+  <div class="dps-div-row">
+    <div id="dps-content" class="dps-div-col">
+      <div class="dps-window">
+        <div id="dps-header" class="dps-flex-row">
+          <i class="dps-title">DPS</i>
+          <i id="swap-button" style="width: 30px; text-align: end">5P</i>
+          <span id="stats-button" class="">📈</span>
+          <i id="reset-button" class="fa-solid fa-arrows-rotate"></i>
+          <select id="dps-logs" class="st-spacer"></select>
+          <i id="close-button" class="fa-solid fa-xmark"></i>
         </div>
-        <div id="loading-indicator">
-            <i class="fa-solid fa-spinner fa-spin"></i>
-        </div>
-        <main id="player-bars-container" style="margin-top: 40px; border: 1px solid rgba(255, 255, 255, 0.1); display: none;"></main>
-        <div class="resize-handle" id="resize-handle" title="Arrastrar para redimensionar">
-            <i class="fa-solid fa-grip-lines"></i>
-        </div>
+        <i id="dps-spinner" class="fa-solid fa-spinner"></i>
+        <table id="dps-table" class="dps-table"></table>
+      </div>
+      <div class="dps-window">
+        <table id="dps-table-user" class="dps-table"></table>
+      </div>
     </div>
-
-    <script src="js/main.js"></script>
+    <!--div id="dps-detailed">
+      <div class="dps-window" style="padding: 8px">TODO</div>
+    </div-->
+  </div>
+  <i
+    id="drag-button"
+    style="
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      width: 12px;
+      height: 12px;
+      background: linear-gradient(135deg, transparent 50%, #eee2 50%);
+    "
+  ></i>
+  <script src="js/data.js"></script>
+  <script src="js/main.js"></script>
 </body>
-</html>

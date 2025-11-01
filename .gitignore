@@ -8,6 +8,8 @@ dist/logs/
 
 # Build output
 /dist
+/dist_electron
+/dist_electron/*
 
 # Misc
 .npmrc
@@ -15,5 +17,3 @@ dist/logs/
 pnpm-lock.yaml
 server - copia - copia.js
 .env
-
-/algo

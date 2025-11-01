@@ -1,814 +1,423 @@
-// Estado global para modo Lite
-let isLiteMode = false;
-let liteModeType = 'dps'; // 'dps' o 'healer'
-const professionMap = {
-    // Clases Principales
-    '雷影剑士': { name: 'Stormblade', icon: 'Stormblade.png', role: 'dps' },
-    '冰魔导师': { name: 'Frost Mage', icon: 'Frost Mage.png', role: 'dps' },
-    '涤罪恶火·战斧': { name: 'Fire Axe', icon: 'Fire Axe.png', role: 'dps' },
-    '青岚骑士': { name: 'Wind Knight', icon: 'Wind Knight.png', role: 'tank' },
-    '森语者': { name: 'Verdant Oracle', icon: 'Verdant Oracle.png', role: 'dps' },
-    '雷霆一闪·手炮': { name: 'Gunner', icon: 'desconocido.png', role: 'dps' },
-    '巨刃守护者': { name: 'Heavy Guardian', icon: 'baluarte_ferreo.png', role: 'tank' },
-    '暗灵祈舞·仪刀/仪仗': { name: 'Spirit Dancer', icon: 'desconocido.png', role: 'dps' },
-    '神射手': { name: 'Marksman', icon: 'arco_halcon.png', role: 'dps' },
-    '神盾骑士': { name: 'Shield Knight', icon: 'guardian.png', role: 'tank' },
-    '灵魂乐手': { name: 'Soul Musician', icon: 'sonido_feroz.png', role: 'dps' },
+const elSpinner = document.getElementById("dps-spinner");
+const elCloseBtn = document.getElementById("close-button");
+const elResetBtn = document.getElementById("reset-button");
+const elSwapBtn = document.getElementById("swap-button");
+const elStatsBtn = document.getElementById("stats-button");
+const elDragBtn = document.getElementById("drag-button");
+const elDpsTable = document.getElementById("dps-table");
+const elDpsTableUser = document.getElementById("dps-table-user");
+const elDpsTimer = document.getElementById("dps-timer");
+const elDpsLogs = document.getElementById("dps-logs");
 
-    // Especializaciones
-    '居合': { name: 'laido Slash', icon: 'Stormblade.png', role: 'dps' },
-    '月刃': { name: 'MoonStrike', icon: 'MoonStrike.png', role: 'dps' },
-    '冰矛': { name: 'Icicle', icon: 'lanza_hielo.png', role: 'dps' },
-    '射线': { name: 'Frostbeam', icon: 'Frost Mage.png', role: 'dps' },
-    '防盾': { name: 'Vanguard', icon: 'guardian.png', role: 'tank' },
-    '岩盾': { name: 'Skyward', icon: 'Fire Axe.png', role: 'tank' },
-    '惩戒': { name: 'Smite', icon: 'castigo.png', role: 'dps' },
-    '愈合': { name: 'Lifebind', icon: 'Verdant Oracle.png', role: 'healer' },
-    '格挡': { name: 'Block', icon: 'guardian.png', role: 'tank' },
-    '狼弓': { name: 'Wildpack', icon: 'arco_lobo.png', role: 'dps' },
-    '鹰弓': { name: 'Falconry', icon: 'arco_halcon.png', role: 'dps' },
-    '光盾': { name: 'Shield', icon: 'egida_luz.png', role: 'tank' },
-    '协奏': { name: 'Concerto', icon: 'Concierto.png', role: 'dps' },
-    '狂音': { name: 'Dissonance', icon: 'sonido_feroz.png', role: 'dps' },
-    '空枪': { name: 'Empty Gun', icon: 'francotirador.png', role: 'dps' },
-    '重装': { name: 'Heavy Armor', icon: 'Wind Knight.png', role: 'dps' },
+const MAX_LOGS = 5;
+const MAX_PLAYERS_0 = 5;
+const MAX_PLAYERS_1 = 20;
+const HEADER_HEIGHT = 28;
+const LITE_BAR_HEIGHT = 35;
+const ADVC_BAR_HEIGHT = 60;
+const WIN_STATE_KEY = "win_state";
+const WIN_MIN_HEIGHT = HEADER_HEIGHT * 2 + MAX_PLAYERS_0 * LITE_BAR_HEIGHT;
+const WIN_MIN_SIZE_LITE = [420, WIN_MIN_HEIGHT];
+const WIN_MIN_SIZE_ADVC = [520, WIN_MIN_HEIGHT];
 
+let logsList = new Array();
+let userUid;
+let startTime;
+let playerLimit = MAX_PLAYERS_0;
+let currentLogIdx = -1;
+let latestUsersList;
+let winState = {
+  size: WIN_MIN_SIZE_LITE,
+  position: [0, 0],
+  isLiteMode: true,
 };
 
- const defaultProfession = { name: 'Unknown', icon: 'desconocido.png', role: 'dps' };
+function resizeWindow(width, height) {
+  const [w, h] = winState.size;
+  const minSize = winState.isLiteMode ? WIN_MIN_SIZE_LITE : WIN_MIN_SIZE_ADVC;
+  winState.size = [
+    Math.max(minSize[0], width ? width : w),
+    Math.max(minSize[1], height ? height : h),
+  ];
+  const [nw, nh] = winState.size;
+  window.electronAPI?.resizeWindow(nw, nh);
+  saveWindowState();
+}
 
-    let lastTotalDamage = 0;
-    let lastDamageChangeTime = Date.now();
-    let currentZoom = 1.0; // Factor de zoom inicial
-    let syncTimerInterval;
-    let syncCountdown = 0;
-    const SYNC_RESET_TIME = 80; // Segundos para el reinicio automático
-    let syncTimerDisplayTimeout; // Para el retardo de 200ms
-    let isLocked = false; // Estado de bloqueo de la ventana
-    let logPreviewTimeout; // Declarar logPreviewTimeout aquí
+function saveWindowState() {
+  localStorage.setItem(WIN_STATE_KEY, JSON.stringify(winState));
+}
 
-    const dpsTimerDiv = document.getElementById('dps-timer');
-    const playerBarsContainer = document.getElementById('player-bars-container');
-    const syncButton = document.getElementById('sync-button');
-    const syncIcon = document.querySelector('#sync-button .sync-icon');
-    const syncTimerSpan = document.querySelector('#sync-button .sync-timer');
-    const lockButton = document.getElementById('lock-button');
-    const logsSection = document.getElementById('logs-section'); // Declarar logsSection aquí
-    const encountersSection = document.getElementById('encounters-section'); // Sección de encuentros guardados
-    const loadingIndicator = document.getElementById('loading-indicator'); // Indicador de carga
-    let currentEncounterId = null; // ID del encuentro actualmente cargado
-    let isViewingHistory = false; // Si estamos viendo un encuentro histórico
+function loadWindowState() {
+  const state = localStorage.getItem(WIN_STATE_KEY);
+  if (state) {
+    winState = {
+      ...winState,
+      ...JSON.parse(state),
+    };
+  }
+  const [sx, sy] = winState.size;
+  const [dx, dy] = winState.position;
+  window.electronAPI?.setPosition(dx, dy);
+  window.electronAPI?.resizeWindow(sx, sy);
+}
 
-    // Permitir interacción con Alt cuando está bloqueado
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Alt') {
-            if (document.body.classList.contains('locked')) {
-                document.body.classList.add('alt-pressed');
-            }
-        }
+function generateBar(user) {
+  const dps = formatValue(user.total_dps);
+  const totalDamage = formatValue(user.total_dmg);
+  const damagePercent = user.total_dmg_perc || 0;
+  const critPercent = user.crit_perc;
+  const barPercent = user.bar_percent;
+
+  const name = user.name ? user.name : `#${user.id || 0}`;
+  const rank = formatValue(user.rank) || "-";
+  const color = getUserColor(user, userUid);
+
+  const [main, spec] = getUserProfessions(user);
+  const iconSpec = spec?.icon || main.icon;
+  const iconClass = main.icon;
+  const gearScore = formatValue(user.fight_points);
+
+  if (winState.isLiteMode) {
+    return `
+    <tr style="--p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent); height: ${LITE_BAR_HEIGHT}">
+      <td style="width: 32px">
+        <div class="dps-rank">
+          <img src="${iconSpec}"/>
+          <span>${rank}</span>
+        </div>
+      </td>
+      <td style="width: 28px; position: relative">
+        <img src="${iconClass}" style="width: 28px; height: 28px; translate: 0 4px; opacity: 0.25"/>
+        <span style="text-align: center; font-size: 8pt; color: #eeee; position: absolute; left: 0; bottom: 2px; width: 100%; text-shadow: 1px 1px 0px #111">${gearScore}</span>
+      </td>
+      <td style="width: 100%; padding-left: 8px;" class="td-left">${name}</td>
+      <td style="width: 60px">${dps}<span class="st-sublabel">/s</span></td>
+      <td style="width: 60px">${critPercent}<span class="st-sublabel">%</span></td>
+      <td style="width: 60px">${totalDamage}</td>
+      <td style="width: 50px">${damagePercent}<span class="st-sublabel">%</span></td>
+    </tr>
+    `;
+  }
+
+  const hps = formatValue(user.total_hps);
+  const totalHealing = formatValue(user.total_heal);
+  const damageTaken = formatValue(user.total_dtk);
+  const totalDeaths = formatValue(user.deaths);
+  const crt = formatValue(user.crit_perc);
+  const lck = formatValue(user.luck_perc);
+  const max = formatValue(user.peak_dps);
+
+  const hp = formatValue(user.hp, 0);
+  const maxHp = formatValue(user.max_hp, 0);
+  const hpPerc = user.hp_perc;
+
+  return `
+  <tr style="--p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent); height: ${ADVC_BAR_HEIGHT}px">
+    <td style="width: 32px">
+      <div class="dps-rank">
+        <img src="${iconSpec}"/>
+        <span>${rank}</span>
+      </div>
+    </td>
+    <td style="width: 28px;">
+      <img src="${iconClass}" style="width: 20px; height: 20px; vertical-align: middle; translate: 0 4px"/>
+      <span style="text-align: center; font-size: 8pt; color: #eeee">${gearScore}</span>
+    </td>
+    <td style="width: 100%; padding-left: 8px;" class="td-left">      
+      <span>${name}</span>
+      <div style="height: 16px;width: 120px;border-radius: 14px;background-color: #1116; margin-top:8px">
+        <div style="background-color: ${getHealthColor(hpPerc)}; height: 100%; width: ${hpPerc}%; border-radius: 14px">
+          <span style="padding: 0 4px; position: absolute; font-size: 9pt; translate: 0 -1px; text-shadow: 0 0 2px #111">🤍 ${hp} / ${maxHp}</span>
+        </div>
+      </div>
+    </td>
+    <td style="width: 80px">
+      <div style="display: flex; flex-direction: column; text-align: end">
+        <span>${dps}<span class="st-sublabel" style="display: inline-block; width: 24px">DPS</span></span>
+        <span>${hps}<span class="st-sublabel" style="display: inline-block; width: 24px">HPS</span></span>
+        <span>${damageTaken}<span class="st-sublabel" style="display: inline-block; width: 24px">DTK</span></span>
+      </div>
+    </td>
+    <td style="width: 100px">
+      <div style="display: flex; flex-direction: column; text-align: end">
+        <span>${crt}<span class="st-sublabel" style="display: inline-block; width: 32px">% CRT</span></span>
+        <span>${lck}<span class="st-sublabel" style="display: inline-block; width: 32px">% LCK</span></span>
+        <span>${max}<span class="st-sublabel" style="display: inline-block; width: 32px">  MAX</span></span>
+      </div>
+    </td>
+    <td style="width: 80px">
+      <div style="display: flex; flex-direction: column; text-align: end">
+        <span>${totalDamage}<span class="st-sublabel" style="display: inline-block; width: 18px">🔥</span></span>
+        <span>${totalHealing}<span class="st-sublabel" style="display: inline-block; width: 18px">💉</span></span>
+        <span>${totalDeaths}<span class="st-sublabel" style="display: inline-block; width: 18px">💀</span></span>
+      </div>
+    </td>
+    <td style="width: 50px">${damagePercent}<span class="st-sublabel">%</span></td>
+  </tr>
+  `;
+}
+
+async function fetchUsers() {
+  const data = await fetch("/api/data").then((res) => res.json());
+
+  const percent = (v, max) =>
+    v > 0 ? Math.floor(clamp((v / max) * 100, 0, 100)) : 0;
+  const totalDmg = (u) => Number(u.total_damage?.total || 0);
+  const entries = Object.entries(data.user).filter(([_, u]) => totalDmg(u) > 0);
+
+  let maxDamage = 0;
+  let totalDamage = 0;
+  entries.forEach(([_, u]) => {
+    const dmg = totalDmg(u);
+    maxDamage = Math.max(maxDamage, dmg);
+    totalDamage += dmg;
+  });
+
+  const list = entries
+    .sort(([ia, a], [ib, b]) => totalDmg(b) - totalDmg(a))
+    .map(([id, user], rank) => {
+      const totalHps = Number(user.total_hps || 0);
+      const totalDps = Number(user.total_dps || 0);
+      const totalDtk = Number(user.taken_damage || 0);
+
+      const totalDmg = Number(user.total_damage?.total ?? 0);
+      const totalHeal = Number(user.total_healing?.total ?? 0);
+      const totalDmgPerc = percent(totalDmg, totalDamage);
+      const barPerc = percent(totalDmg, maxDamage);
+
+      const totalHits = Number(user.total_count?.total ?? 0);
+      const totalCrit = Number(user.total_count?.critical ?? 0);
+      const totalLuck = Number(user.total_count?.lucky ?? 0);
+      const critPerc = percent(totalCrit, totalHits);
+      const luckPerc = percent(totalLuck, totalHits);
+      const peakDps = Number(user.realtime_dps_max || 0);
+
+      const hp = Number(user.hp || 0);
+      const maxHp = Number(user.max_hp || 0);
+      const hpPerc = percent(hp, maxHp);
+
+      return {
+        id: id.toString(),
+        rank: rank + 1,
+        name: user.name,
+        role: user.role,
+        profession: user.profession,
+
+        hp: hp,
+        max_hp: maxHp,
+        hp_perc: hpPerc,
+
+        total_dps: totalDps,
+        total_dmg: totalDmg,
+        total_dmg_perc: totalDmgPerc,
+        crit_perc: critPerc,
+        luck_perc: luckPerc,
+        peak_dps: peakDps,
+
+        total_hps: totalHps,
+        total_heal: totalHeal,
+        total_dtk: totalDtk,
+        deaths: user.dead_count,
+        bar_percent: barPerc,
+        fight_points: user.fightPoint,
+      };
     });
-    document.addEventListener('keyup', (e) => {
-        if (e.key === 'Alt') {
-            document.body.classList.remove('alt-pressed');
-        }
-    });
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const resetButton = document.getElementById('reset-button');
-        if (resetButton) {
-            resetButton.addEventListener('click', () => {
-                resetDpsMeter();
-            });
-        }
+  if (userUid) {
+    const idx = list.findIndex((u) => u.id === userUid);
+    const nList = list.slice(0, MAX_PLAYERS_1);
+    if (idx !== -1 && MAX_PLAYERS_1 <= idx) nList.push(list[idx]);
+    return nList;
+  }
 
+  return list.slice(0, MAX_PLAYERS_1);
+}
 
-        // Botón Advanced/Lite
-        const advLiteBtn = document.getElementById('advanced-lite-btn');
-        const liteDpsHealerBtn = document.getElementById('lite-dps-healer-btn');
-        if (advLiteBtn) {
-            advLiteBtn.addEventListener('click', () => {
-                isLiteMode = !isLiteMode;
-                advLiteBtn.classList.toggle('lite', isLiteMode);
-                advLiteBtn.textContent = isLiteMode ? 'Lite' : 'Advanced';
-                // Mostrar/ocultar el botón DPS/Healer
-                if (liteDpsHealerBtn) {
-                    liteDpsHealerBtn.style.display = isLiteMode ? 'inline-flex' : 'none';
-                }
-                fetchDataAndRender();
-            });
-        }
-        if (liteDpsHealerBtn) {
-            liteDpsHealerBtn.addEventListener('click', () => {
-                liteModeType = (liteModeType === 'dps') ? 'healer' : 'dps';
-                liteDpsHealerBtn.textContent = (liteModeType === 'dps') ? 'DPS' : 'Healer';
-                liteDpsHealerBtn.classList.toggle('lite', isLiteMode); /* Asegura que el botón Lite/Healer también tenga el estilo 'lite' */
-                fetchDataAndRender();
-            });
-        }
-        // Inicializar visibilidad y estilo del botón al cargar
-        if (liteDpsHealerBtn) {
-            liteDpsHealerBtn.style.display = isLiteMode ? 'inline-flex' : 'none';
-            liteDpsHealerBtn.classList.toggle('lite', isLiteMode);
-        }
+const clear = () => {
+  fetch("/api/clear");
+};
 
-        const zoomInButton = document.getElementById('zoom-in-button');
-        const zoomOutButton = document.getElementById('zoom-out-button');
+const saveLog = () => {
+  if (!latestUsersList || latestUsersList.length < 1) return;
+  logsList.unshift({
+    start: startTime,
+    end: Date.now(),
+    data: latestUsersList,
+    total_damage: latestUsersList.reduce((a, u) => a + u.total_dmg, 0),
+  });
+  logsList = logsList.slice(0, MAX_LOGS);
+  latestUsersList = null;
+  currentLogIdx = -1;
+  startTime = null;
+  renderLogOptions();
+};
 
-        if (zoomInButton) {
-            zoomInButton.addEventListener('click', () => {
-                currentZoom = Math.min(2.0, currentZoom + 0.1); // Limitar zoom máximo a 2.0
-                applyZoom();
-            });
-        }
+const renderLogOptions = () => {
+  elDpsLogs.innerHTML = '<option value="">Live Dps</option>';
+  logsList.forEach((l, i) => {
+    const selected = i === currentLogIdx;
+    const ago = formatDurationMax(Date.now() - l.end);
+    const damage = formatValue(l.total_damage);
+    const duration = formatDurationMax(l.end - l.start);
+    elDpsLogs.innerHTML += `<option value="${i}" ${selected ? "selected" : ""}>#${i + 1} - ${damage} in ${duration} - ${ago} ago</option>`;
+  });
+};
 
-        if (zoomOutButton) {
-            zoomOutButton.addEventListener('click', () => {
-                currentZoom = Math.max(0.5, currentZoom - 0.1); // Limitar zoom mínimo a 0.5
-                applyZoom();
-            });
-        }
+async function fetchAndRender() {
+  const users = await fetchUsers();
 
-        if (syncButton) {
-            // syncButton.addEventListener('click', syncData); // El botón de sincronización ya no es clicable
-        }
-
-        if (lockButton) {
-            lockButton.addEventListener('click', () => {
-                if (window.electronAPI) {
-                    window.electronAPI.toggleLockState();
-                }
-            });
-
-            // Escuchar cambios de estado del candado desde el proceso principal
-            if (window.electronAPI) {
-                window.electronAPI.onLockStateChanged((locked) => {
-                    isLocked = locked;
-                    lockButton.innerHTML = isLocked ? '<i class="fa-solid fa-lock"></i>' : '<i class="fa-solid fa-lock-open"></i>';
-                    lockButton.title = isLocked ? 'Desbloquear posición' : 'Bloquear posición';
-                    document.body.classList.toggle('locked', isLocked); // Añadir/quitar clase al body
-                });
-            }
-        }
-
-        const closeButton = document.getElementById('close-button');
-        if (closeButton) {
-            closeButton.addEventListener('click', () => {
-                if (window.electronAPI) {
-                    window.electronAPI.closeWindow();
-                }
-            });
-        }
-
-        // Resize handle functionality
-        const resizeHandle = document.getElementById('resize-handle');
-        if (resizeHandle && window.electronAPI) {
-            let isResizing = false;
-            let startMouseY = 0;
-            let startWindowHeight = 0;
-
-            const startResize = (e) => {
-                isResizing = true;
-                startMouseY = e.pageY;
-                startWindowHeight = window.innerHeight;
-                document.body.style.userSelect = 'none';
-                document.body.style.cursor = 'ns-resize';
-                e.preventDefault();
-                e.stopPropagation();
-            };
-
-            const doResize = (e) => {
-                if (!isResizing) return;
-                const deltaY = e.pageY - startMouseY;
-                const newHeight = Math.max(200, Math.min(2000, startWindowHeight + deltaY));
-                window.electronAPI.resizeWindow(650, Math.round(newHeight));
-            };
-
-            const stopResize = () => {
-                if (isResizing) {
-                    isResizing = false;
-                    document.body.style.userSelect = '';
-                    document.body.style.cursor = '';
-                }
-            };
-
-            resizeHandle.addEventListener('mousedown', startResize);
-            window.addEventListener('mousemove', doResize);
-            window.addEventListener('mouseup', stopResize);
-        }
-
-    });
-
-    function applyZoom() {
-        if (playerBarsContainer) {
-            playerBarsContainer.style.transform = `scale(${currentZoom})`;
-            playerBarsContainer.style.transformOrigin = 'top left';
-            updateWindowSize(); // Redimensionar la ventana al aplicar zoom
-        }
+  if (users && users.length > 0) {
+    latestUsersList = users;
+    if (!startTime) {
+      startTime = Date.now();
     }
+  } else {
+    saveLog();
+  }
 
-    function updateWindowSize() {
-        const dpsMeter = document.querySelector('.dps-meter');
-        const container = document.getElementById('player-bars-container');
-        if (!dpsMeter || !container || !window.electronAPI) return;
+  if (currentLogIdx !== -1) return;
+  renderTable(users, playerLimit);
+}
 
-        const baseWidth = 650; // Ancho fijo como se solicitó
-        const headerHeight = document.querySelector('.controls')?.offsetHeight || 50; // Altura de la cabecera
-        const marginTop = 40; // Margen superior del contenedor de barras
-        const borderWidth = 2; // Borde superior e inferior del contenedor
-        const barHeight = 55; // Altura de cada barra de jugador
-        const barGap = 8;    // Espacio entre barras
+const loadLogAndRender = () => {
+  if (currentLogIdx === -1) return;
+  const data = logsList[currentLogIdx];
+  renderTable(data.data, playerLimit);
+};
 
-        const numPlayers = container.querySelectorAll('.player-bar').length;
-        const numPlayersCapped = Math.min(numPlayers, 10); // Limitar a 10 barras
+const renderTable = (users, limit) => {
+  if (!users || users.length === 0) {
+    elSpinner.style.display = null;
+    elDpsTable.style.display = "none";
+  } else {
+    elSpinner.style.display = "none";
+    elDpsTable.style.display = "";
+  }
 
-        let barsHeight = 0;
-        if (numPlayersCapped > 0) {
-            barsHeight = (numPlayersCapped * barHeight) + ((numPlayersCapped - 1) * barGap);
-        } else {
-            // Altura mínima para el mensaje "Esperando datos..."
-            barsHeight = 50;
-        }
+  let partyDps = 0;
+  let partyDamage = 0;
+  users.forEach((u) => {
+    partyDps += u.total_dps;
+    partyDamage += u.total_dmg;
+  });
 
-        // Calcular la altura total sin escalar, incluyendo la cabecera y un búfer
-        const totalContentHeightUnscaled = headerHeight + marginTop + borderWidth + barsHeight + 20; // Búfer de 20px
+  const getHeader = () => {
+    const widths = winState.isLiteMode ? [60, 60, 60] : [80, 100, 80];
+    return `
+    <tr style="height: ${HEADER_HEIGHT}px">
+      <td style="width: 32px" class="st-sublabel">#</td>
+      <td style="width: 28px"></td>
+      <td style="width: 100%" class="td-left"><span class="st-sublabel"><i class="fa-solid fa-clock"></i></span> ${formatDuration(Date.now() - startTime)}</td>
+      <td style="width: ${widths[0]}px">${formatValue(partyDps)}<span class="st-sublabel">/s</span></td>
+      <td style="width: ${widths[1]}px" class="st-sublabel">${winState.isLiteMode ? "CRIT" : ""}</td>
+      <td style="width: ${widths[2]}px">${formatValue(partyDamage)}</td>
+      <td style="width: 50px"></td>
+    </tr>`;
+  };
 
-        // Aplicar el zoom actual al ancho y alto de la ventana
-        const finalWidth = Math.round(baseWidth * currentZoom);
-        const finalHeight = Math.round(totalContentHeightUnscaled * currentZoom);
-        
-        window.electronAPI.resizeWindow(finalWidth, finalHeight);
+  const renderable = users.slice(0, limit);
+  elDpsTable.innerHTML =
+    getHeader() + renderable.map((u) => generateBar(u)).join("");
+
+  if (userUid) {
+    const above = renderable.find((u) => u.id === userUid);
+    if (!above) {
+      const user = users.find((u) => u.id === userUid);
+      elDpsTableUser.innerHTML = user ? generateBar(user) : "";
+    } else {
+      elDpsTableUser.innerHTML = "";
     }
+  }
+};
 
-    function resetDpsMeter() {
-        fetch('/api/clear');
-        dpsTimerDiv.style.display = 'none';
-        dpsTimerDiv.innerText = '';
-        console.log('Medidor reiniciado.');
-        lastTotalDamage = 0;
-        lastDamageChangeTime = Date.now();
-        stopSyncTimer(); // Detener el temporizador de sincronización al reiniciar
+window.addEventListener("DOMContentLoaded", (_) => {
+  loadWindowState();
+
+  const electron = window.electronAPI;
+  electron?.onArgs((args) => {
+    const KEY = "--uid=";
+    const arg = args.find((a) => a.startsWith(KEY));
+    if (!arg) return;
+    userUid = arg.substring(KEY.length).trim();
+    console.log("User UID:", userUid);
+  });
+  electron?.onMove((pos) => {
+    winState.position = pos;
+    saveWindowState();
+  });
+  electron?.onLock((locked) => {
+    document.body.classList.toggle("locked", locked);
+  });
+
+  const autoResize = () => {
+    const barHeight = winState.isLiteMode ? LITE_BAR_HEIGHT : ADVC_BAR_HEIGHT;
+    const extraHeight = userUid ? 4 + barHeight : 0;
+    const h = HEADER_HEIGHT * 2 + playerLimit * barHeight + extraHeight;
+    resizeWindow(null, h);
+    fetchAndRender();
+  };
+
+  elCloseBtn.addEventListener("click", () => electron?.closeWindow());
+  elResetBtn.addEventListener("click", () => clear());
+  elStatsBtn.addEventListener("click", () => {
+    winState.isLiteMode = !winState.isLiteMode;
+    autoResize();
+  });
+  elSwapBtn.addEventListener("click", () => {
+    playerLimit = playerLimit === MAX_PLAYERS_0 ? MAX_PLAYERS_1 : MAX_PLAYERS_0;
+    elSwapBtn.innerHTML = `${playerLimit}P`;
+    autoResize();
+  });
+  if (elDragBtn) {
+    let isResizing = false;
+    let mouseStartX = 0;
+    let mouseStartY = 0;
+    let startWinX = 0;
+    let startWinY = 0;
+
+    const startResize = (e) => {
+      isResizing = true;
+      mouseStartX = e.pageX;
+      mouseStartY = e.pageY;
+      startWinX = window.innerWidth;
+      startWinY = window.innerHeight;
+      document.body.style.cursor = "nwse-resize";
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const doResize = (e) => {
+      if (!isResizing) return;
+      const deltaX = e.pageX - mouseStartX;
+      const deltaY = e.pageY - mouseStartY;
+      const newX = startWinX + deltaX;
+      const newY = startWinY + deltaY;
+      resizeWindow(newX, newY);
+    };
+
+    const stopResize = () => {
+      if (!isResizing) return;
+      isResizing = false;
+      document.body.style.cursor = "";
+    };
+
+    elDragBtn.addEventListener("mousedown", startResize);
+    window.addEventListener("mousemove", doResize);
+    window.addEventListener("mouseup", stopResize);
+  }
+  elDpsLogs.onchange = async function () {
+    if (this.value === "") {
+      currentLogIdx = -1;
+      fetchAndRender();
+    } else {
+      currentLogIdx = Number(this.value);
+      loadLogAndRender();
     }
+  };
 
-    // La función syncData ya no se llama por un clic, pero se mantiene por si se usa internamente
-    async function syncData() {
-        // No modificar el estado visual aquí, se gestiona en updateSyncButtonState
-        try {
-            await fetch('/api/sync', { method: 'POST' });
-            console.log('Datos sincronizados internamente.');
-        } catch (error) {
-            console.error('Error al sincronizar datos:', error);
-        }
-    }
-
-    // Función para actualizar el estado visual del indicador de sincronización
-    function updateSyncButtonState() {
-        clearTimeout(syncTimerDisplayTimeout); // Limpiar cualquier timeout pendiente
-
-        if (syncTimerInterval) { // Si el temporizador está activo (hay cuenta regresiva)
-            if (syncCountdown <= 60) {
-                // Mostrar temporizador, ocultar icono
-                syncIcon.style.display = 'none';
-                syncIcon.classList.remove('spinning');
-                syncTimerSpan.innerText = `${syncCountdown}s`;
-                syncTimerSpan.style.display = 'block';
-            } else {
-                // Mostrar icono girando, ocultar temporizador
-                syncIcon.style.display = 'block';
-                syncIcon.classList.add('spinning'); // Asegura que gire continuamente
-                syncTimerSpan.style.display = 'none';
-            }
-        } else { // Si el temporizador no está activo (no hay cuenta regresiva)
-            // Mostrar icono girando, ocultar temporizador
-            syncIcon.style.display = 'block';
-            syncIcon.classList.add('spinning'); // Asegura que gire continuamente
-            syncTimerSpan.style.display = 'none';
-            syncTimerSpan.innerText = '';
-        }
-    }
-
-    function startSyncTimer() {
-        if (syncTimerInterval) return; // Evitar múltiples temporizadores
-        syncCountdown = SYNC_RESET_TIME;
-        updateSyncButtonState(); // Establecer el estado inicial
-
-        syncTimerInterval = setInterval(() => {
-            syncCountdown--;
-            updateSyncButtonState(); // Actualizar el estado en cada tick
-
-            if (syncCountdown <= 0) {
-                stopSyncTimer();
-                resetDpsMeter();
-            }
-        }, 1000);
-    }
-
-    function stopSyncTimer() {
-        clearInterval(syncTimerInterval);
-        syncTimerInterval = null;
-        clearTimeout(syncTimerDisplayTimeout); // Limpiar el timeout si existe
-        updateSyncButtonState(); // Restablecer el estado del indicador
-    }
-
-    function formatTimer(ms) {
-        const s = Math.max(0, Math.ceil(ms / 1000));
-        const min = Math.floor(s / 60);
-        const sec = s % 60;
-        return `${min}:${sec.toString().padStart(2, '0')}`;
-    }
-
-    async function fetchLogs() {
-        const res = await fetch('/logs-dps');
-        return await res.json();
-    }
-
-    function renderLogs(logs) {
-        let html = '';
-        if (logs.length === 0) {
-            logsSection.style.display = 'none'; // Ocultar la sección si no hay logs
-            return;
-        } else {
-            logsSection.style.display = 'block'; // Mostrar la sección si hay logs
-            html = '<select id="logs-dropdown" style="width:100%;padding:6px 4px;border-radius:6px;font-size:1rem;">' +
-                `<option value="-1">LOG</option>` +
-                logs.map((log, i) => `<option value="${i}">${log.fecha}</option>`).join('') + '</select>';
-            html += '<div id="log-preview"></div>';
-        }
-        logsSection.innerHTML = html;
-        if (logs.length > 0) {
-            let lastValue = -1;
-            const dropdown = document.getElementById('logs-dropdown');
-            dropdown.onchange = function() {
-                if (this.value == lastValue || this.value == -1) {
-                    showLogPreview(null);
-                    this.value = -1;
-                    lastValue = -1;
-                } else {
-                    showLogPreview(logs[this.value]);
-                    lastValue = this.value;
-                }
-            };
-        }
-    }
-
-    function showLogPreview(log) {
-        const logPreview = document.getElementById('log-preview');
-        if (logPreviewTimeout) {
-            clearTimeout(logPreviewTimeout);
-        }
-
-        if (!log) {
-            logPreview.innerHTML = '';
-            return;
-        }
-
-        let prof = professionMap && log.icon ? Object.values(professionMap).find(p => p.icon === log.icon) : null;
-        let profName = prof ? prof.name : '';
-        logPreview.innerHTML = `<div class=\"player-bar\" style=\"margin-top:10px;\">\n            <div class=\"progress-fill\" style=\"width: 100%; background: #444b5a;\"></div>\n            <div class=\"bar-content\">\n                <div class=\"player-info\">\n                    <span class=\"player-name\">${log.nombre}</span>\n                    <span class=\"player-id\">ID: ${log.id}</span>\n                    <span class=\"player-id\">${profName}</span>\n                </div>\n                <div class=\"player-performance\">\n                    <div class=\"stats-list\">\n                        <span class=\"main-stat\">DPS ${formatStat(log.dps)}</span>\n                        <span class=\"secondary-stat\">HPS ${formatStat(log.hps)}</span>\n                        <span class=\"secondary-stat\">DTPS ${formatStat(log.dtps)}</span>\n                    </div>\n                    <img class=\"class-icon\" src=\"icons/${log.icon}\" alt=\"icon\">\n                </div>\n            </div>\n        </div>`;
-        logPreviewTimeout = setTimeout(() => { 
-            logPreview.innerHTML = '';
-        }, 7000);
-    }
-
-    async function updateLogsUI() {
-        const logs = await fetchLogs();
-        renderLogs(logs);
-    }
-
-    async function fetchEncounters() {
-        try {
-            const res = await fetch('/api/encounters');
-            const result = await res.json();
-            return result.data || [];
-        } catch (error) {
-            console.error('Error fetching encounters:', error);
-            return [];
-        }
-    }
-
-    function formatDuration(ms) {
-        const seconds = Math.floor(ms / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-
-    function formatDate(dateString) {
-        const date = new Date(dateString);
-        const now = new Date();
-        const diffMs = now - date;
-        const diffMins = Math.floor(diffMs / 60000);
-        const diffHours = Math.floor(diffMs / 3600000);
-        const diffDays = Math.floor(diffMs / 86400000);
-
-        if (diffMins < 60) {
-            return `${diffMins}m ago`;
-        } else if (diffHours < 24) {
-            return `${diffHours}h ago`;
-        } else if (diffDays < 7) {
-            return `${diffDays}d ago`;
-        } else {
-            return date.toLocaleDateString();
-        }
-    }
-
-    function renderEncounters(encounters) {
-        console.log('Rendering encounters dropdown with', encounters.length, 'encounters');
-        encountersSection.style.display = 'block';
-        let html = '<select id="encounters-dropdown" style="width:100%;padding:6px 4px;border-radius:6px;font-size:1rem;background:rgba(0,0,0,0.3);color:var(--text-primary);border:1px solid rgba(255, 255, 255, 0.2);">';
-        html += '<option value="">Live DPS</option>';
-
-        encounters.forEach(enc => {
-            const selected = currentEncounterId === enc.id ? 'selected' : '';
-            const duration = formatDuration(enc.duration_ms);
-            const date = formatDate(enc.date);
-            const damage = formatStat(enc.total_damage);
-            html += `<option value="${enc.id}" ${selected}>${date} - ${damage} (${duration}) - ${enc.player_count} players</option>`;
-        });
-
-        html += '</select>';
-        encountersSection.innerHTML = html;
-        console.log('Encounters dropdown HTML updated');
-
-        const dropdown = document.getElementById('encounters-dropdown');
-        dropdown.onchange = async function() {
-            if (this.value === '') {
-                currentEncounterId = null;
-                isViewingHistory = false;
-                fetchDataAndRender();
-            } else {
-                await loadEncounter(this.value);
-            }
-        };
-    }
-
-    async function loadEncounter(encounterId) {
-        try {
-            const res = await fetch(`/api/encounters/${encounterId}`);
-            const result = await res.json();
-
-            if (result.code === 0 && result.encounter) {
-                currentEncounterId = encounterId;
-                isViewingHistory = true;
-                renderHistoricalData(result.encounter.data);
-            }
-        } catch (error) {
-            console.error('Error loading encounter:', error);
-        }
-    }
-
-    function renderHistoricalData(userData) {
-        loadingIndicator.style.display = 'none';
-        playerBarsContainer.style.display = 'flex';
-
-        let userArray = Object.values(userData);
-        userArray = userArray.filter(u => u.total_damage && u.total_damage.total > 0);
-
-        const sumaTotalDamage = userArray.reduce((acc, u) => acc + (u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0), 0);
-
-        userArray.forEach(u => {
-            const userDamage = u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0;
-            u.damagePercent = sumaTotalDamage > 0 ? Math.max(0, Math.min(100, (userDamage / sumaTotalDamage) * 100)) : 0;
-        });
-
-        if (isLiteMode && liteModeType === 'healer') {
-            const totalHealingContribution = userArray.reduce((acc, u) => acc + (u.total_healing && u.total_healing.total ? Number(u.total_healing.total) : 0), 0);
-            userArray.forEach(u => {
-                const userHealing = u.total_healing && u.total_healing.total ? Number(u.total_healing.total) : 0;
-                u.healingPercent = totalHealingContribution > 0 ? Math.max(0, Math.min(100, (userHealing / totalHealingContribution) * 100)) : 0;
-            });
-            userArray.sort((a, b) => b.healingPercent - a.healingPercent);
-        } else {
-            userArray.sort((a, b) => (b.total_damage && b.total_damage.total ? Number(b.total_damage.total) : 0) - (a.total_damage && a.total_damage.total ? Number(a.total_damage.total) : 0));
-        }
-
-        userArray = userArray.slice(0, 20);
-
-        // Render using same logic as live data
-        const container = document.getElementById('player-bars-container');
-        if (isLiteMode) {
-            renderLiteBars(container, userArray);
-        } else {
-            renderAdvancedBars(container, userArray);
-        }
-
-        updateWindowSize();
-    }
-
-    async function updateEncountersUI() {
-        console.log('Updating encounters UI...');
-        const encounters = await fetchEncounters();
-        console.log(`Fetched ${encounters.length} encounters`);
-        renderEncounters(encounters);
-    }
-
-    function getHealthColor(percentage) {
-        const r1 = 220, g1 = 53, b1 = 69; // Rojo para HP bajo (#dc3545)
-        const r2 = 40, g2 = 167, b2 = 69; // Verde para HP alto (#28a745)
-
-        const r = Math.round(r1 + (r2 - r1) * (percentage / 100));
-        const g = Math.round(g1 + (g2 - g1) * (percentage / 100));
-        const b = Math.round(b1 + (b2 - b1) * (percentage / 100));
-
-        return `rgb(${r}, ${g}, ${b})`;
-    }
-
-    function formatStat(value) {
-        if (value >= 1000000000000) {
-            return (value / 1000000000000).toFixed(1) + 'T';
-        }
-        if (value >= 1000000000) {
-            return (value / 1000000000).toFixed(1) + 'G';
-        }
-        if (value >= 1000000) {
-            return (value / 1000000).toFixed(1) + 'M';
-        }
-        if (value >= 1000) {
-            return (value / 1000).toFixed(1) + 'k';
-        }
-        return value.toFixed(0);
-    }
-
-    const playerColors = [
-        'rgba(255, 99, 132, 0.7)', // Rojo
-        'rgba(54, 162, 235, 0.7)', // Azul
-        'rgba(255, 206, 86, 0.7)', // Amarillo
-        'rgba(75, 192, 192, 0.7)', // Verde
-        'rgba(153, 102, 255, 0.7)', // Morado
-        'rgba(255, 159, 64, 0.7)' // Naranja
-    ];
-
-    function renderLiteBars(container, userArray) {
-        container.innerHTML = userArray.map((u, index) => {
-            const professionParts = u.profession.split('-');
-            const mainProfessionKey = professionParts[0];
-            const subProfessionKey = professionParts[1];
-            const mainProf = professionMap[mainProfessionKey] || defaultProfession;
-            const subProf = professionMap[subProfessionKey];
-            let prof = subProf || mainProf;
-            const nombre = u.name || '';
-            const color = playerColors[index % playerColors.length];
-            let barFillWidth, barFillBackground, value1, value2, iconHtml;
-
-            if (liteModeType === 'dps') {
-                barFillWidth = u.damagePercent;
-                barFillBackground = u.total_dps > 0 ? `linear-gradient(90deg, transparent, ${color})` : 'none';
-                iconHtml = "<span style='font-size:1.1em;margin-right:2px;'>🔥</span>";
-                value1 = `${formatStat(u.total_damage.total || 0)}`;
-                value2 = `${Math.round(u.damagePercent)}%`;
-            } else {
-                barFillWidth = u.healingPercent;
-                barFillBackground = u.total_healing && u.total_healing.total > 0 ? `linear-gradient(90deg, transparent, #28a745)` : 'none';
-                iconHtml = "<span style='font-size:1.1em;margin-right:2px; color: #28a745; text-shadow: 0 0 2px white, 0 0 2px white, 0 0 2px white, 0 0 2px white;'>⛨</span>";
-                value1 = `${formatStat((u.total_healing && u.total_healing.total) || 0)}`;
-                value2 = `${Math.round(u.healingPercent)}%`;
-            }
-
-            return `<div class="lite-bar" data-lite="true" data-rank="${u.rank}">
-                <div class="lite-bar-fill" style="width: ${barFillWidth}%; background: ${barFillBackground};"></div>
-                <div class="lite-bar-content" style="position: absolute; left: 0; top: 0; width: 100%; height: 100%; justify-content: space-between;">
-                    <div class="skill-analysis-button" title="Análisis de Habilidades">
-                        <i class="fa-solid fa-chart-bar"></i>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 5px;">
-                        <img class="lite-bar-icon" src="icons/${prof.icon}" alt="icon" style="margin-left:2px; margin-right:5px;" />
-                        <span class="lite-bar-name">${nombre}</span>
-                    </div>
-                    <div class="lite-bar-values">
-                        <span class="lite-bar-damage">${value1} ${iconHtml}</span>
-                        <span class="lite-bar-percent">${value2}</span>
-                    </div>
-                </div>
-            </div>`;
-        }).join('');
-    }
-
-    function renderAdvancedBars(container, userArray) {
-        container.innerHTML = userArray.map((u, index) => {
-            const professionParts = u.profession.split('-');
-            const mainProfessionKey = professionParts[0];
-            const subProfessionKey = professionParts[1];
-            const mainProf = professionMap[mainProfessionKey] || defaultProfession;
-            const subProf = professionMap[subProfessionKey];
-            let prof = subProf || mainProf;
-            let professionName = mainProf.name;
-            if (subProf) {
-                professionName += ` - ${subProf.name}`;
-            }
-            const dps = Number(u.total_dps) || 0;
-            const totalHealing = u.total_healing ? (Number(u.total_healing.total) || 0) : 0;
-            const color = playerColors[index % playerColors.length];
-            const dpsColor = dps > 0 ? `linear-gradient(90deg, transparent, ${color})` : 'none';
-            const nombre = u.name || '';
-            const totalHits = u.total_count.total || 0;
-            const crit = (u.total_count.critical !== undefined && totalHits > 0) ? Math.round((u.total_count.critical / totalHits) * 100) : '0';
-            const lucky = (u.total_count.lucky !== undefined && totalHits > 0) ? Math.round((u.total_count.lucky / totalHits) * 100) : '0';
-            const peak = (u.realtime_dps_max !== undefined) ? u.realtime_dps_max : 0;
-            return `<div class="player-bar" data-rank="${u.rank}">
-                <div class="progress-fill" style="width: ${u.damagePercent}%; background: ${dpsColor}"></div>
-                <div class="bar-content">
-                    <div class="skill-analysis-button" title="Análisis de Habilidades">
-                        <i class="fa-solid fa-chart-bar"></i>
-                    </div>
-                    <div class="column name-col">
-                        <span class="player-name">${nombre}</span>
-                        <div class="additional-stat-row" style="height: 18px; margin-top: 1px; margin-bottom: 1px;">
-                            <span class="additional-stat-icon" style="color: #dc3545; position: absolute; left: 4px; z-index: 2;">❤</span>
-                            <div class="hp-bar-background">
-                                <div class="hp-bar-fill" style="width: ${((u.hp || 0) / (u.max_hp || 1)) * 100}%; background-color: ${getHealthColor(((u.hp || 0) / (u.max_hp || 1)) * 100)};"></div>
-                            </div>
-                            <span class="additional-stat-value" style="width: 100%; text-align: center; font-size: 0.8rem; color: white; text-shadow: 1px 1px 1px black;">${formatStat(u.hp || 0)}/${formatStat(u.max_hp || 0)}</span>
-                        </div>
-                        <span class="player-id">${professionName}</span>
-                    </div>
-                    <div class="column stats-col" style="margin-left: 40px;">
-                        <div class="stats-group">
-                            <div class="stat-row"><span class="stat-value">${formatStat(dps)}</span><span class="stat-label">DPS</span></div>
-                            <div class="stat-row"><span class="stat-value">${formatStat(u.total_hps || 0)}</span><span class="stat-label" style="color: #28a745;">HPS</span></div>
-                            <div class="stat-row"><span class="stat-value">${formatStat(u.taken_damage)}</span><span class="stat-label" style="color: #ffc107;">DT</span></div>
-                        </div>
-                    </div>
-                    <div class="column icon-col" style="flex-direction: column; justify-content: center; align-items: center; text-align: center; min-width: 65px; position: relative; margin-left: -10px;">
-                        <img class="class-icon" src="icons/${prof.icon}" alt="icon" style="height: 42px; width: 42px;">
-                        <span style="font-size: 0.8rem; font-weight: 600; color: #fff; background: rgba(0, 0, 0, 0.5); padding: 0 4px; border-radius: 5px; position: absolute; top: 12.5px; left: 50%; transform: translateX(-50%); text-shadow: 0 0 2px rgba(0,0,0,0.7);">${Math.round(u.damagePercent)}%</span>
-                    </div>
-                    <div class="column extra-col" style="margin-left: -10px;">
-                        <div class="stats-extra">
-                            <div class="stat-row">
-                                <span class="stat-label">CRIT</span>
-                                <span class="stat-icon"> ✸</span>
-                                <span class="stat-value">${crit}%</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">LUCK</span>
-                                <span class="stat-icon"> ☘</span>
-                                <span class="stat-value">${lucky}%</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">MAX</span>
-                                <span class="stat-icon"> ⚔</span>
-                                <span class="stat-value">${formatStat(peak)}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="column additional-stats-col">
-                        <div class="additional-stats-group">
-                            <div class="additional-stat-row">
-                                <span class="additional-stat-icon" style="font-weight: bold;">GS</span>
-                                <span class="additional-stat-value">${formatStat(u.fightPoint)}</span>
-                            </div>
-                            <div class="additional-stat-row">
-                                <span class="additional-stat-icon">🔥</span>
-                                <span class="additional-stat-value">${formatStat(u.total_damage.total || 0)}</span>
-                            </div>
-                            <div class="additional-stat-row">
-                                <span class="additional-stat-icon" style="color: #28a745;">⛨</span>
-                                <span class="additional-stat-value">${formatStat(u.total_healing.total || 0)}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        }).join('');
-    }
-
-    async function fetchDataAndRender() {
-        if (isViewingHistory) {
-            return; // Don't update if viewing historical data
-        }
-
-        const container = document.getElementById('player-bars-container');
-        try {
-            const [dataRes, diccRes, settingsRes] = await Promise.all([
-                fetch('/api/data'),
-                fetch('/api/diccionario'),
-                fetch('/api/settings')
-            ]);
-            const userData = await dataRes.json();
-            const diccionarioData = await diccRes.json();
-            const currentGlobalSettings = await settingsRes.json();
-
-            let userArray = Object.values(userData.user);
-            userArray = userArray.filter(u => u.total_damage && u.total_damage.total > 0);
-
-            if (!userArray || userArray.length === 0) {
-                loadingIndicator.style.display = 'flex'; // Mostrar el indicador de carga
-                playerBarsContainer.style.display = 'none'; // Ocultar el contenedor de barras
-                updateSyncButtonState();
-                return;
-            }
-
-            loadingIndicator.style.display = 'none'; // Ocultar el indicador de carga
-            playerBarsContainer.style.display = 'flex'; // Mostrar el contenedor de barras
-
-            const sumaTotalDamage = userArray.reduce((acc, u) => acc + (u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0), 0);
-
-            if (sumaTotalDamage > 0) {
-                if (sumaTotalDamage !== lastTotalDamage) {
-                    lastTotalDamage = sumaTotalDamage;
-                    lastDamageChangeTime = Date.now();
-                    stopSyncTimer();
-                } else {
-                    if (Date.now() - lastDamageChangeTime > SYNC_RESET_TIME * 1000) {
-                        resetDpsMeter();
-                        return;
-                    }
-                    if (!syncTimerInterval) {
-                        startSyncTimer();
-                    }
-                }
-            } else {
-                lastTotalDamage = 0;
-                lastDamageChangeTime = Date.now();
-                stopSyncTimer();
-            }
-
-            // Cálculo de damagePercent para todos los usuarios (base para Advanced y Lite DPS)
-            userArray.forEach(u => {
-                const userDamage = u.total_damage && u.total_damage.total ? Number(u.total_damage.total) : 0;
-                u.damagePercent = sumaTotalDamage > 0 ? Math.max(0, Math.min(100, (userDamage / sumaTotalDamage) * 100)) : 0;
-            });
-
-            if (isLiteMode && liteModeType === 'healer') {
-                const totalHealingContribution = userArray.reduce((acc, u) => acc + (u.total_healing && u.total_healing.total ? Number(u.total_healing.total) : 0), 0);
-                userArray.forEach(u => {
-                    const userHealing = u.total_healing && u.total_healing.total ? Number(u.total_healing.total) : 0;
-                    u.healingPercent = totalHealingContribution > 0 ? Math.max(0, Math.min(100, (userHealing / totalHealingContribution) * 100)) : 0;
-                });
-                userArray.sort((a, b) => b.healingPercent - a.healingPercent);
-            } else { // Modo DPS (Lite o Advanced)
-                userArray.sort((a, b) => (b.total_damage && b.total_damage.total ? Number(b.total_damage.total) : 0) - (a.total_damage && a.total_damage.total ? Number(a.total_damage.total) : 0));
-            }
-            
-            userArray = userArray.slice(0, 20);
-
-            if (isLiteMode) {
-                renderLiteBars(container, userArray);
-            } else {
-                renderAdvancedBars(container, userArray);
-            }
-        } catch (err) {
-            if (container) {
-                container.innerHTML = '<div id="message-display">Error de conexión...</div>';
-            }
-        } finally {
-            updateSyncButtonState();
-            updateWindowSize();
-        }
-    }
-
-    // Actualizar UI cada 50ms
-    setInterval(fetchDataAndRender, 50);
-    fetchDataAndRender();
-    updateLogsUI();
-    updateEncountersUI();
-
-    // Refresh encounters list periodically
-    setInterval(updateEncountersUI, 10000);
-
-    // Script para eliminar el texto de depuración de VSCode
-    document.addEventListener('DOMContentLoaded', () => {
-        const debugTexts = [
-            '# VSCode Visible Files',
-            '# VSCode Open Tabs',
-            '# Current Time',
-            '# Context Window Usage',
-            '# Current Mode'
-        ];
-
-        // Función para buscar y eliminar nodos de texto o elementos que contengan el texto
-        function removeDebugText() {
-            const allElements = document.body.querySelectorAll('*');
-            allElements.forEach(element => {
-                debugTexts.forEach(debugText => {
-                    if (element.textContent.includes(debugText)) {
-                        // Si el texto está directamente en el elemento, o es un elemento que contiene solo ese texto
-                        if (element.childNodes.length === 1 && element.firstChild.nodeType === Node.TEXT_NODE && element.firstChild.textContent.includes(debugText)) {
-                            element.remove();
-                        } else {
-                            // Si el texto es parte de un nodo de texto más grande, intentar eliminar solo el nodo de texto
-                            Array.from(element.childNodes).forEach(node => {
-                                if (node.nodeType === Node.TEXT_NODE && node.textContent.includes(debugText)) {
-                                    node.remove();
-                                }
-                            });
-                        }
-                    }
-                });
-            });
-
-            // También buscar directamente en el body si hay nodos de texto sueltos
-            Array.from(document.body.childNodes).forEach(node => {
-                if (node.nodeType === Node.TEXT_NODE) {
-                    debugTexts.forEach(debugText => {
-                        if (node.textContent.includes(debugText)) {
-                            node.remove();
-                        }
-                    });
-                }
-            });
-        }
-
-        // Ejecutar la función inmediatamente y luego con un pequeño retraso para capturar inyecciones tardías
-        removeDebugText();
-        setTimeout(removeDebugText, 500); // Reintentar después de 500ms
-    });
+  setInterval(renderLogOptions, 1000);
+  setInterval(fetchAndRender, 50);
+  renderLogOptions();
+  fetchAndRender();
+});
