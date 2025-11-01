@@ -63,6 +63,14 @@
       padding: 0px 8px;
     }
 
+    .dps-title {
+      -webkit-app-region: drag;
+      width: 64px;
+      border-right: 1px solid #eee4;
+      text-align: center;
+      padding-right: 8px;
+    }
+
     .st-spacer {
       flex: 1;
     }
@@ -92,6 +100,15 @@
 
     body:not(.locked) #close-button:hover {
       color: #a00;
+      cursor: pointer;
+    }
+
+    #stats-button {
+      opacity: 0.8;
+    }
+
+    body:not(.locked) #stats-button:hover {
+      opacity: 1;
       cursor: pointer;
     }
 
@@ -197,11 +214,9 @@
     <div id="dps-content" class="dps-div-col">
       <div class="dps-window">
         <div id="dps-header" class="dps-flex-row">
-          <i style="-webkit-app-region: drag; width: 64px">
-            <i class="fa-regular fa-clock" style="-webkit-app-region: drag"></i>
-            DPS
-          </i>
+          <i class="dps-title">DPS</i>
           <i id="swap-button" style="width: 30px; text-align: end">5P</i>
+          <span id="stats-button" class="">📈</span>
           <i id="reset-button" class="fa-solid fa-arrows-rotate"></i>
           <select id="dps-logs" class="st-spacer"></select>
           <i id="close-button" class="fa-solid fa-xmark"></i>

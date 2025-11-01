@@ -2,6 +2,7 @@ const elSpinner = document.getElementById("dps-spinner");
 const elCloseBtn = document.getElementById("close-button");
 const elResetBtn = document.getElementById("reset-button");
 const elSwapBtn = document.getElementById("swap-button");
+const elStatsBtn = document.getElementById("stats-button");
 const elDragBtn = document.getElementById("drag-button");
 const elDpsTable = document.getElementById("dps-table");
 const elDpsTableUser = document.getElementById("dps-table-user");
@@ -13,9 +14,9 @@ const MAX_PLAYERS_0 = 5;
 const MAX_PLAYERS_1 = 20;
 const HEADER_HEIGHT = 28;
 const LITE_BAR_HEIGHT = 35;
-const ADVC_BAR_HEIGHT = 48;
+const ADVC_BAR_HEIGHT = 60;
 const WIN_STATE_KEY = "win_state";
-const WIN_MIN_SIZE = [380, HEADER_HEIGHT + MAX_PLAYERS_0 * LITE_BAR_HEIGHT];
+const WIN_MIN_SIZE = [420, HEADER_HEIGHT * 2 + MAX_PLAYERS_0 * LITE_BAR_HEIGHT];
 
 let logsList = new Array();
 let userUid;
@@ -60,51 +61,85 @@ function loadWindowState() {
 
 function generateBar(user) {
   const dps = formatValue(user.total_dps);
-  const dmg = formatValue(user.total_dmg);
-  const name = user.name || "";
+  const totalDamage = formatValue(user.total_dmg);
+  const damagePercent = user.total_dmg_perc || 0;
+  const critPercent = user.crit_perc;
+  const barPercent = user.bar_percent;
+
+  const name = user.name ? user.name : `#${user.id || 0}`;
   const rank = formatValue(user.rank) || "-";
   const color = getUserColor(user, userUid);
-  const percent = user.total_dmg_perc || 0;
-  const barPercent = user.bar_percent;
 
   const [main, spec] = getUserProfessions(user);
   const iconSpec = spec?.icon || main.icon;
   const iconClass = main.icon;
+  const gearScore = formatValue(user.fight_points);
 
-  if (winState.isLiteMode && true) {
+  if (winState.isLiteMode) {
     return `
-    <tr style="--p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent)">
+    <tr style="--p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent); height: ${LITE_BAR_HEIGHT}">
       <td style="width: 32px">
         <div class="dps-rank">
           <img src="${iconSpec}"/>
           <span>${rank}</span>
         </div>
       </td>
-      <td style="width: 28px">
-        <img src="${iconClass}" style="width: 20px; height: 20px; vertical-align: middle; translate: -4px 0"/>
+      <td style="width: 28px; position: relative">
+        <img src="${iconClass}" style="width: 28px; height: 28px; translate: 0 4px; opacity: 0.25"/>
+        <span style="text-align: center; font-size: 8pt; color: #eeee; position: absolute; left: 0; bottom: 2px; width: 100%; text-shadow: 1px 1px 0px #111">${gearScore}</span>
       </td>
-      <td style="width: 100%" class="td-left">${name}</td>
-      <td style="width: 60px">${dmg}<span class="st-sublabel"></span></td>
+      <td style="width: 100%; padding-left: 8px;" class="td-left">${name}</td>
       <td style="width: 60px">${dps}<span class="st-sublabel">/s</span></td>
-      <td style="width: 50px">${percent}<span class="st-sublabel">%</span></td>
+      <td style="width: 60px">${critPercent}<span class="st-sublabel">%</span></td>
+      <td style="width: 60px">${totalDamage}</td>
+      <td style="width: 50px">${damagePercent}<span class="st-sublabel">%</span></td>
     </tr>
     `;
   }
 
-  const points = formatValue(user.fight_points);
+  const hps = formatValue(user.total_hps);
+  const totalHealing = formatValue(user.total_heal);
+  const damageTaken = formatValue(user.total_dtk);
+  const totalDeaths = formatValue(user.deaths);
+  const crt = formatValue(user.crit_perc);
+  const lck = formatValue(user.luck_perc);
+  const max = formatValue(user.peak_dps);
+
   return `
-  <tr style="height: 48px; --p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent)">
-    <td style="width: 40px">${rank}</td>
-    <td style="width: 32px; height:32px">
-      <img src="${iconSpec}" style="width: 28px; height: 28px"/>
+  <tr style="--p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent); height: ${ADVC_BAR_HEIGHT}px">
+    <td style="width: 32px">
+      <div class="dps-rank">
+        <img src="${iconSpec}"/>
+        <span>${rank}</span>
+      </div>
     </td>
-    <td style="width: 100%" class="td-left">${name}</td>
-    <td style="width: 60px">${dmg}<span class="st-sublabel"></span></td>
-    <td style="width: 100px" class="td-right">
-      <div>${dps}<span class="st-sublabel">/s DPS</span></div>
-      <div>${0}<span class="st-sublabel">/s HPS</span></div>
+    <td style="width: 28px;">
+      <img src="${iconClass}" style="width: 20px; height: 20px; vertical-align: middle; translate: 0 4px"/>
+      <span style="text-align: center; font-size: 8pt; color: #eeee">${gearScore}</span>
     </td>
-    <td style="width: 50px">${percent}<span class="st-sublabel">%</span></td>
+    <td style="width: 100%; padding-left: 8px;" class="td-left">${name}</td>
+    <td style="width: 80px">
+      <div style="display: flex; flex-direction: column; text-align: end">
+        <span>${dps}<span class="st-sublabel" style="display: inline-block; width: 24px">DPS</span></span>
+        <span>${hps}<span class="st-sublabel" style="display: inline-block; width: 24px">HPS</span></span>
+        <span>${damageTaken}<span class="st-sublabel" style="display: inline-block; width: 24px">DTK</span></span>
+      </div>
+    </td>
+    <td style="width: 100px">
+      <div style="display: flex; flex-direction: column; text-align: end">
+        <span>${crt}<span class="st-sublabel" style="display: inline-block; width: 32px">% CRT</span></span>
+        <span>${lck}<span class="st-sublabel" style="display: inline-block; width: 32px">% LCK</span></span>
+        <span>${max}<span class="st-sublabel" style="display: inline-block; width: 32px">  MAX</span></span>
+      </div>
+    </td>
+    <td style="width: 80px">
+      <div style="display: flex; flex-direction: column; text-align: end">
+        <span>${totalDamage}<span class="st-sublabel" style="display: inline-block; width: 18px">🔥</span></span>
+        <span>${totalHealing}<span class="st-sublabel" style="display: inline-block; width: 18px">💉</span></span>
+        <span>${totalDeaths}<span class="st-sublabel" style="display: inline-block; width: 18px">💀</span></span>
+      </div>
+    </td>
+    <td style="width: 50px">${damagePercent}<span class="st-sublabel">%</span></td>
   </tr>
   `;
 }
@@ -128,21 +163,40 @@ async function fetchUsers() {
   const list = entries
     .sort(([ia, a], [ib, b]) => totalDmg(b) - totalDmg(a))
     .map(([id, user], rank) => {
+      const totalHps = Number(user.total_hps || 0);
       const totalDps = Number(user.total_dps || 0);
-      const totalDmg = Number(user.total_damage?.total || 0);
-      const totalPerc = percent(totalDmg, totalDamage);
+      const totalDtk = Number(user.taken_damage || 0);
+
+      const totalDmg = Number(user.total_damage?.total ?? 0);
+      const totalHeal = Number(user.total_healing?.total ?? 0);
+      const totalDmgPerc = percent(totalDmg, totalDamage);
       const barPerc = percent(totalDmg, maxDamage);
+
+      const totalHits = Number(user.total_count?.total ?? 0);
+      const totalCrit = Number(user.total_count?.critical ?? 0);
+      const totalLuck = Number(user.total_count?.lucky ?? 0);
+      const critPerc = percent(totalCrit, totalHits);
+      const luckPerc = percent(totalLuck, totalHits);
+      const peakDps = Number(user.realtime_dps_max || 0);
+
       return {
         id: id.toString(),
         rank: rank + 1,
-        name: user.name ? user.name : `#${id}`,
+        name: user.name,
         role: user.role,
         profession: user.profession,
 
         total_dps: totalDps,
         total_dmg: totalDmg,
-        total_dmg_perc: totalPerc,
+        total_dmg_perc: totalDmgPerc,
+        crit_perc: critPerc,
+        luck_perc: luckPerc,
+        peak_dps: peakDps,
 
+        total_hps: totalHps,
+        total_heal: totalHeal,
+        total_dtk: totalDtk,
+        deaths: user.dead_count,
         bar_percent: barPerc,
         fight_points: user.fightPoint,
       };
@@ -219,8 +273,30 @@ const renderTable = (users, limit) => {
     elDpsTable.style.display = "";
   }
 
+  let partyDps = 0;
+  let partyDamage = 0;
+  users.forEach((u) => {
+    partyDps += u.total_dps;
+    partyDamage += u.total_dmg;
+  });
+
+  const getHeader = () => {
+    const widths = winState.isLiteMode ? [60, 60, 60] : [80, 100, 80];
+    return `
+    <tr style="height: ${HEADER_HEIGHT}px">
+      <td style="width: 32px" class="st-sublabel">#</td>
+      <td style="width: 28px"></td>
+      <td style="width: 100%" class="td-left"><span class="st-sublabel"><i class="fa-solid fa-clock"></i></span> ${formatDuration(Date.now() - startTime)}</td>
+      <td style="width: ${widths[0]}px">${formatValue(partyDps)}<span class="st-sublabel">/s</span></td>
+      <td style="width: ${widths[1]}px" class="st-sublabel">${winState.isLiteMode ? "CRIT" : ""}</td>
+      <td style="width: ${widths[2]}px">${formatValue(partyDamage)}</td>
+      <td style="width: 50px"></td>
+    </tr>`;
+  };
+
   const renderable = users.slice(0, limit);
-  elDpsTable.innerHTML = renderable.map((u) => generateBar(u)).join("");
+  elDpsTable.innerHTML =
+    getHeader() + renderable.map((u) => generateBar(u)).join("");
 
   if (userUid) {
     const above = renderable.find((u) => u.id === userUid);
@@ -252,14 +328,24 @@ window.addEventListener("DOMContentLoaded", (_) => {
     document.body.classList.toggle("locked", locked);
   });
 
+  const autoResize = () => {
+    const barHeight = winState.isLiteMode ? LITE_BAR_HEIGHT : ADVC_BAR_HEIGHT;
+    const extraHeight = userUid ? 4 + barHeight : 0;
+    const h = HEADER_HEIGHT * 2 + playerLimit * barHeight + extraHeight;
+    resizeWindow(null, h);
+    fetchAndRender();
+  };
+
   elCloseBtn.addEventListener("click", () => electron?.closeWindow());
   elResetBtn.addEventListener("click", () => clear());
+  elStatsBtn.addEventListener("click", () => {
+    winState.isLiteMode = !winState.isLiteMode;
+    autoResize();
+  });
   elSwapBtn.addEventListener("click", () => {
     playerLimit = playerLimit === MAX_PLAYERS_0 ? MAX_PLAYERS_1 : MAX_PLAYERS_0;
     elSwapBtn.innerHTML = `${playerLimit}P`;
-    const barHeight = winState.isLiteMode ? LITE_BAR_HEIGHT : ADVC_BAR_HEIGHT;
-    const extraHeight = userUid ? 4 + barHeight : 0;
-    resizeWindow(null, HEADER_HEIGHT + playerLimit * barHeight + extraHeight);
+    autoResize();
   });
   if (elDragBtn) {
     let isResizing = false;
