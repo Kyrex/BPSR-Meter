@@ -15,11 +15,11 @@ function initializeApi(app, server, io, userDataManager, logger, globalSettings)
     app.use(express.static(path.join(__dirname, '..', '..', 'public'))); // Ajustar la ruta
 
     app.get('/icon.png', (req, res) => {
-        res.sendFile(path.join(__dirname, '..', '..', 'icon.png')); // Ajustar la ruta
+        res.sendFile(path.join(__dirname, '..', '..', 'public', 'icon.png')); // Ajustar la ruta
     });
 
     app.get('/favicon.ico', (req, res) => {
-        res.sendFile(path.join(__dirname, '..', '..', 'icon.ico')); // Ajustar la ruta
+        res.sendFile(path.join(__dirname, '..', '..', 'public', 'icon.ico')); // Ajustar la ruta
     });
 
     app.get('/api/data', (req, res) => {

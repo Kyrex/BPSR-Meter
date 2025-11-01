@@ -16,7 +16,9 @@ const HEADER_HEIGHT = 28;
 const LITE_BAR_HEIGHT = 35;
 const ADVC_BAR_HEIGHT = 60;
 const WIN_STATE_KEY = "win_state";
-const WIN_MIN_SIZE = [420, HEADER_HEIGHT * 2 + MAX_PLAYERS_0 * LITE_BAR_HEIGHT];
+const WIN_MIN_HEIGHT = HEADER_HEIGHT * 2 + MAX_PLAYERS_0 * LITE_BAR_HEIGHT;
+const WIN_MIN_SIZE_LITE = [420, WIN_MIN_HEIGHT];
+const WIN_MIN_SIZE_ADVC = [520, WIN_MIN_HEIGHT];
 
 let logsList = new Array();
 let userUid;
@@ -25,16 +27,17 @@ let playerLimit = MAX_PLAYERS_0;
 let currentLogIdx = -1;
 let latestUsersList;
 let winState = {
-  size: WIN_MIN_SIZE,
+  size: WIN_MIN_SIZE_LITE,
   position: [0, 0],
   isLiteMode: true,
 };
 
 function resizeWindow(width, height) {
   const [w, h] = winState.size;
+  const minSize = winState.isLiteMode ? WIN_MIN_SIZE_LITE : WIN_MIN_SIZE_ADVC;
   winState.size = [
-    Math.max(WIN_MIN_SIZE[0], width ? width : w),
-    Math.max(WIN_MIN_SIZE[1], height ? height : h),
+    Math.max(minSize[0], width ? width : w),
+    Math.max(minSize[1], height ? height : h),
   ];
   const [nw, nh] = winState.size;
   window.electronAPI?.resizeWindow(nw, nh);
@@ -105,6 +108,10 @@ function generateBar(user) {
   const lck = formatValue(user.luck_perc);
   const max = formatValue(user.peak_dps);
 
+  const hp = formatValue(user.hp, 0);
+  const maxHp = formatValue(user.max_hp, 0);
+  const hpPerc = user.hp_perc;
+
   return `
   <tr style="--p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent); height: ${ADVC_BAR_HEIGHT}px">
     <td style="width: 32px">
@@ -117,7 +124,14 @@ function generateBar(user) {
       <img src="${iconClass}" style="width: 20px; height: 20px; vertical-align: middle; translate: 0 4px"/>
       <span style="text-align: center; font-size: 8pt; color: #eeee">${gearScore}</span>
     </td>
-    <td style="width: 100%; padding-left: 8px;" class="td-left">${name}</td>
+    <td style="width: 100%; padding-left: 8px;" class="td-left">      
+      <span>${name}</span>
+      <div style="height: 16px;width: 120px;border-radius: 14px;background-color: #1116; margin-top:8px">
+        <div style="background-color: ${getHealthColor(hpPerc)}; height: 100%; width: ${hpPerc}%; border-radius: 14px">
+          <span style="padding: 0 4px; position: absolute; font-size: 9pt; translate: 0 -1px; text-shadow: 0 0 2px #111">🤍 ${hp} / ${maxHp}</span>
+        </div>
+      </div>
+    </td>
     <td style="width: 80px">
       <div style="display: flex; flex-direction: column; text-align: end">
         <span>${dps}<span class="st-sublabel" style="display: inline-block; width: 24px">DPS</span></span>
@@ -179,12 +193,20 @@ async function fetchUsers() {
       const luckPerc = percent(totalLuck, totalHits);
       const peakDps = Number(user.realtime_dps_max || 0);
 
+      const hp = Number(user.hp || 0);
+      const maxHp = Number(user.max_hp || 0);
+      const hpPerc = percent(hp, maxHp);
+
       return {
         id: id.toString(),
         rank: rank + 1,
         name: user.name,
         role: user.role,
         profession: user.profession,
+
+        hp: hp,
+        max_hp: maxHp,
+        hp_perc: hpPerc,
 
         total_dps: totalDps,
         total_dmg: totalDmg,

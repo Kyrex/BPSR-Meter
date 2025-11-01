@@ -147,18 +147,23 @@ const formatDurationMax = (ms) => {
   return `${seconds}s`;
 };
 
-const formatValue = (value) => {
+const formatValue = (value, dec = 1) => {
   if (!value) return 0;
   const vt = 1000000000000;
   const vg = 1000000000;
   const vm = 1000000;
   const vk = 1000;
-  if (value >= vt) return (value / vt).toFixed(1) + "T";
-  if (value >= vg) return (value / vg).toFixed(1) + "G";
-  if (value >= vm) return (value / vm).toFixed(1) + "M";
-  if (value >= vk) return (value / vk).toFixed(1) + "k";
+  if (value >= vt) return (value / vt).toFixed(dec) + "T";
+  if (value >= vg) return (value / vg).toFixed(dec) + "G";
+  if (value >= vm) return (value / vm).toFixed(dec) + "M";
+  if (value >= vk) return (value / vk).toFixed(dec) + "k";
   return value.toFixed(0);
 };
+
+function getHealthColor(percentage) {
+  percentage = Math.floor(clamp(percentage, 0, 100));
+  return `hsl(${percentage}, 50%, 30%)`;
+}
 
 function getUserColor(user, userUid) {
   if (user.id === userUid) {

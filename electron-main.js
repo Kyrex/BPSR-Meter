@@ -85,7 +85,7 @@ async function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
     },
-    icon: path.join(__dirname, "icon.ico"),
+    icon: path.join(__dirname, "public", "icon.ico"),
   });
 
   ipcMain.on("close-window", () => {
@@ -125,6 +125,22 @@ async function createWindow() {
     mainWindow.webContents.send("on-move", pos);
     mainWindow.webContents.send("on-args", process.argv);
   });
+
+  if (false) {
+    const debuServerPath = path.join(
+      __dirname,
+      "src",
+      "server",
+      "server_debug.js"
+    );
+    serverProcess = fork(debuServerPath, [serverPort], {
+      stdio: ["pipe", "pipe", "pipe", "ipc"],
+      execArgv: [],
+    });
+    mainWindow.webContents.openDevTools({ mode: "detach" });
+    console.log("Hosting at", `http://localhost:${serverPort}/index.html`);
+    return mainWindow.loadURL(`http://localhost:${serverPort}/index.html`);
+  }
 
   // Determinar ruta absoluta a server.js según entorno
   let serverPath;

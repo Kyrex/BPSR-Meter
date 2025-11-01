@@ -10,7 +10,7 @@ const zlib = require('zlib');
 const { UserDataManager } = require(path.join(__dirname, 'src', 'server', 'dataManager'));
 const Sniffer = require(path.join(__dirname, 'src', 'server', 'sniffer'));
 const initializeApi = require(path.join(__dirname, 'src', 'server', 'api'));
-const PacketProcessor = require(path.join(__dirname, 'algo', 'packet')); // Asegúrate de que esta ruta sea correcta
+const PacketProcessor = require(path.join(__dirname, 'algo', 'packet'));
 
 const VERSION = '3.1';
 const SETTINGS_PATH = path.join(__dirname, 'settings.json');
