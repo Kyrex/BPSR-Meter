@@ -1,6 +1,6 @@
-# BPSR Meter
+# Ao Meter
 
-AO (青 - blue in japanese) Meter is a desktop application that acts as a real-time DPS (Damage Per Second) meter for the game **Blue Protocol Star Resonance**. 
+Ao (青 - blue in japanese) Meter is a desktop application that acts as a real-time DPS (Damage Per Second) meter for the game **Blue Protocol Star Resonance**. 
 It overlays the game window to provide detailed combat statistics without interrupting your gameplay.
 
 ## Application
