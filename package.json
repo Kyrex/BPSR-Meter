@@ -1,7 +1,7 @@
 {
-  "name": "bpsr-meter",
-  "version": "2.3.0",
-  "description": "BPSR Meter",
+  "name": "ao-meter",
+  "version": "1.0.0",
+  "description": "Ao-Meter",
   "main": "src/electron-main.js",
   "bin": {
     "bpsr-meter": "src/server/server.js"
@@ -60,8 +60,8 @@
     "outputPath": "dist"
   },
   "build": {
-    "appId": "com.bpsr.meter",
-    "productName": "BPSR Meter",
+    "appId": "com.ao.meter",
+    "productName": "Ao Meter",
     "files": [
       "src/**/*",
       "algo/**/*",

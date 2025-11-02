@@ -1,6 +1,7 @@
 # BPSR Meter
 
-BPSR Meter is a desktop application that acts as a real-time DPS (Damage Per Second) meter for the game. It overlays the game window to provide detailed combat statistics without interrupting your gameplay.
+AO (青 - blue in japanese) Meter is a desktop application that acts as a real-time DPS (Damage Per Second) meter for the game **Blue Protocol Star Resonance**. 
+It overlays the game window to provide detailed combat statistics without interrupting your gameplay.
 
 ## Application
 
@@ -19,9 +20,9 @@ Run `npm run dist` to compile the project
 
 ## Installation
 
-1. **Install Npcap:** The application requires Npcap to capture the game's network traffic. If you don't have it installed, go to the "Releases" section of this GitHub repository and download the latest version of the installer (`npcap-1.83.exe`).
-2. **Download the installer:** Go to the "Releases" section of this GitHub repository and download the latest version of the installer (`BPSR Meter Setup X.X.X.exe`).
-3. **Run the installer:** Execute the downloaded `.exe` file and follow the instructions to install the application on your computer.
+1. **Install Npcap:** The application requires Npcap to capture the game's network traffic. If you don't have it installed, get it from its official website [npcap.com](https://npcap.com/dist/npcap-1.84.exe).
+2. **Download the installer:** Go to the "Releases" section of this GitHub repository and download the latest version of the installer (`Ao Meter Setup X.X.X.exe`). A Portable version is also available
+3. **Run the installer or the portable version:** Execute the downloaded `.exe` file and follow the instructions to install the application on your computer. Alternatively get the portable version and execute the `Ao Meter.exe` file.
 
 ## Usage
 
