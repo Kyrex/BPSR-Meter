@@ -85,7 +85,7 @@ async function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
     },
-    icon: path.join(__dirname, "public", "icon.ico"),
+    icon: path.join(__dirname, "..", "public", "icon.ico"),
   });
 
   ipcMain.on("close-window", () => {
@@ -126,30 +126,11 @@ async function createWindow() {
     mainWindow.webContents.send("on-args", process.argv);
   });
 
-  if (false) {
-    const debuServerPath = path.join(
-      __dirname,
-      "src",
-      "server",
-      "server_debug.js"
-    );
-    serverProcess = fork(debuServerPath, [serverPort], {
-      stdio: ["pipe", "pipe", "pipe", "ipc"],
-      execArgv: [],
-    });
-    mainWindow.webContents.openDevTools({ mode: "detach" });
-    console.log("Hosting at", `http://localhost:${serverPort}/index.html`);
-    return mainWindow.loadURL(`http://localhost:${serverPort}/index.html`);
-  }
-
-  // Determinar ruta absoluta a server.js según entorno
   let serverPath;
   if (process.defaultApp || process.env.NODE_ENV === "development") {
-    // Modo desarrollo
-    serverPath = path.join(__dirname, "server.js");
+    serverPath = path.join(__dirname, "..", "src", "server", "server.js");
   } else {
-    // Modo empaquetado: usar app.getAppPath() para acceder dentro del asar
-    serverPath = path.join(app.getAppPath(), "server.js");
+    serverPath = path.join(app.getAppPath(), "src", "server", "server.js");
   }
   console.log(`Opening server.js at ${serverPath}:${serverPort}`);
 
