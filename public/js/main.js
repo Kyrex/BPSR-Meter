@@ -234,11 +234,11 @@ async function fetchUsers() {
   return list.slice(0, MAX_PLAYERS_1);
 }
 
-const clear = () => {
+function clear() {
   fetch("/api/clear");
-};
+}
 
-const saveLog = () => {
+function saveLog() {
   if (!latestUsersList || latestUsersList.length < 1) return;
   logsList.unshift({
     start: startTime,
@@ -251,9 +251,9 @@ const saveLog = () => {
   currentLogIdx = -1;
   startTime = null;
   renderLogOptions();
-};
+}
 
-const renderLogOptions = () => {
+function renderLogOptions() {
   elDpsLogs.innerHTML = '<option value="">Live Dps</option>';
   logsList.forEach((l, i) => {
     const selected = i === currentLogIdx;
@@ -262,7 +262,7 @@ const renderLogOptions = () => {
     const duration = formatDurationMax(l.end - l.start);
     elDpsLogs.innerHTML += `<option value="${i}" ${selected ? "selected" : ""}>#${i + 1} - ${damage} in ${duration} - ${ago} ago</option>`;
   });
-};
+}
 
 async function fetchAndRender() {
   const users = await fetchUsers();
@@ -280,13 +280,13 @@ async function fetchAndRender() {
   renderTable(users, playerLimit);
 }
 
-const loadLogAndRender = () => {
+function loadLogAndRender() {
   if (currentLogIdx === -1) return;
   const data = logsList[currentLogIdx];
   renderTable(data.data, playerLimit);
-};
+}
 
-const renderTable = (users, limit) => {
+function renderTable(users, limit) {
   if (!users || users.length === 0) {
     elSpinner.style.display = null;
     elDpsTable.style.display = "none";
@@ -329,7 +329,7 @@ const renderTable = (users, limit) => {
       elDpsTableUser.innerHTML = "";
     }
   }
-};
+}
 
 window.addEventListener("DOMContentLoaded", (_) => {
   loadWindowState();

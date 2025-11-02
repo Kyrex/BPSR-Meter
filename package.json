@@ -51,7 +51,6 @@
       "diccionario.json",
       "ip.txt",
       "player_map.json",
-      "settings.json",
       "users.json",
       "node_modules/cap/**/*"
     ],
@@ -67,8 +66,7 @@
       "src/**/*",
       "algo/**/*",
       "public/**/*",
-      "tables/**/*",
-      "settings.json"
+      "tables/**/*"
     ],
     "extraResources": [
       {
