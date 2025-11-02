@@ -34,19 +34,19 @@ function initializeApi(app, io, userDataManager, globalSettings) {
   });
 
   app.get("/api/clear", (req, res) => {
-    userDataManager.clearAll(globalSettings); // Pasar globalSettings
-    console.log("¡Estadísticas limpiadas!");
+    userDataManager.clearAll(globalSettings);
+    console.log("Statistics cleared!");
     res.json({
       code: 0,
-      msg: "¡Estadísticas limpiadas!",
+      msg: "Statistics cleared!",
     });
   });
 
   io.on("connection", (socket) => {
-    console.log("Cliente WebSocket conectado: " + socket.id);
+    console.log("Client WebSocket connected: " + socket.id);
 
     socket.on("disconnect", () => {
-      console.log("Cliente WebSocket desconectado: " + socket.id);
+      console.log("Client WebSocket disconnected: " + socket.id);
     });
   });
 

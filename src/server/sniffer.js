@@ -2,12 +2,12 @@ const cap = require('cap');
 const decoders = cap.decoders;
 const PROTOCOL = decoders.PROTOCOL;
 const Readable = require('stream').Readable;
-const findDefaultNetworkDevice = require('../../algo/netInterfaceUtil'); // Ajustar la ruta
-const { Lock } = require('./dataManager'); // Importar Lock desde dataManager
+const findDefaultNetworkDevice = require('../../algo/netInterfaceUtil');
+const { Lock } = require('./dataManager');
 
 const Cap = cap.Cap;
 
-const NPCAP_INSTALLER_PATH = require('path').join(__dirname, '..', '..', 'Dist', 'npcap-1.83.exe'); // Ajustar la ruta
+const NPCAP_INSTALLER_PATH = require('path').join(__dirname, '..', '..', 'Dist', 'npcap-1.83.exe');
 const fs = require('fs');
 const { spawn } = require('child_process');
 
@@ -15,30 +15,30 @@ async function checkAndInstallNpcap(logger) {
     try {
         const devices = Cap.deviceList();
         if (!devices || devices.length === 0 || devices.every(d => d.name.includes('Loopback'))) {
-            throw new Error('Npcap no detectado o no funcional.');
+            throw new Error('Npcap not detected or not functioning.');
         }
-        logger.info('Npcap detectado y funcional.');
+        logger.info('Npcap detected and functioning.');
         return true;
     } catch (e) {
-        logger.warn(`Npcap no detectado o no funcional: ${e.message}`);
-        logger.info('Intentando instalar Npcap...');
+        logger.warn(`Npcap not detected or not functioning: ${e.message}`);
+        logger.info('Attempting to install Npcap...');
 
         if (!fs.existsSync(NPCAP_INSTALLER_PATH)) {
-            logger.error(`Instalador de Npcap no encontrado en: ${NPCAP_INSTALLER_PATH}`);
-            logger.info('Por favor, instala Npcap manualmente desde la carpeta Dist/ y reinicia la aplicación.');
+            logger.error(`Npcap installer not found at: ${NPCAP_INSTALLER_PATH}`);
+            logger.info('Please install Npcap manually and restart the application.');
             return false;
         }
 
         try {
-            logger.info('Ejecutando instalador de Npcap. Por favor, sigue las instrucciones en pantalla.');
+            logger.info('Running Npcap installer. Please follow the on-screen instructions.');
             const npcapProcess = spawn(NPCAP_INSTALLER_PATH, [], { detached: true, stdio: 'ignore' });
             npcapProcess.unref();
 
-            logger.info('Npcap installer lanzado. Por favor, instala Npcap y luego reinicia esta aplicación.');
+            logger.info('Npcap installer launched. Please install Npcap and then restart this application.');
             return false;
         } catch (spawnError) {
-            logger.error(`Error al ejecutar el instalador de Npcap: ${spawnError.message}`);
-            logger.info('Por favor, instala Npcap manualmente desde la carpeta Dist/ y reinicia la aplicación.');
+            logger.error(`Error running Npcap installer: ${spawnError.message}`);
+            logger.info('Please install Npcap manually and restart the application.');
             return false;
         }
     }
@@ -48,7 +48,7 @@ class Sniffer {
     constructor(logger, userDataManager, globalSettings) {
         this.logger = logger;
         this.userDataManager = userDataManager;
-        this.globalSettings = globalSettings; // Pasar globalSettings al sniffer
+        this.globalSettings = globalSettings;
         this.current_server = '';
         this._data = Buffer.alloc(0);
         this.tcp_next_seq = -1;
@@ -60,7 +60,7 @@ class Sniffer {
         this.eth_queue = [];
         this.capInstance = null;
         this.packetProcessor = null;
-        this.isPaused = false; // Estado de pausa para el sniffer
+        this.isPaused = false;
     }
 
     setPaused(paused) {
@@ -137,7 +137,7 @@ class Sniffer {
     }
 
     async processEthPacket(frameBuffer) {
-        if (this.isPaused) return; // No procesar paquetes si está pausado
+        if (this.isPaused) return;
 
         var ethPacket = decoders.Ethernet(frameBuffer);
 
@@ -180,9 +180,9 @@ class Sniffer {
                                         this.userDataManager.refreshEnemyCache();
                                         if (this.globalSettings.autoClearOnServerChange && this.userDataManager.lastLogTime !== 0 && this.userDataManager.users.size !== 0) {
                                             this.userDataManager.clearAll(this.globalSettings);
-                                            console.log('¡Servidor cambiado, estadísticas limpiadas!');
+                                            console.log('Server changed, statistics cleared!');
                                         }
-                                        console.log('Servidor de juego detectado. Midiendo DPS...');
+                                        console.log('Game server detected. Measuring DPS...');
                                     }
                                 } catch (e) {}
                             } while (data1 && data1.length);
@@ -208,9 +208,9 @@ class Sniffer {
                                 this.userDataManager.refreshEnemyCache();
                                 if (this.globalSettings.autoClearOnServerChange && this.userDataManager.lastLogTime !== 0 && this.userDataManager.users.size !== 0) {
                                     this.userDataManager.clearAll(this.globalSettings);
-                                    console.log('¡Servidor cambiado, estadísticas limpiadas!');
+                                    console.log('Server changed, statistics cleared!');
                                 }
-                                console.log('Servidor de juego detectado por paquete de inicio de sesión. Midiendo DPS...');
+                                console.log('Game server detected from login packet. Measuring DPS...');
                             }
                         }
                     }
@@ -246,7 +246,7 @@ class Sniffer {
                     const packet = this._data.subarray(0, packetSize);
                     this._data = this._data.subarray(packetSize);
                     if (this.packetProcessor) {
-                        this.packetProcessor.processPacket(packet, this.isPaused, this.globalSettings); // Pasar isPaused y globalSettings
+                        this.packetProcessor.processPacket(packet, this.isPaused, this.globalSettings);
                     }
                 } else if (packetSize > 0x0fffff) {
                     this.logger.error(`Invalid Length!! ${this._data.length},${packetSize},${this._data.toString('hex')},${this.tcp_next_seq}`);
@@ -262,7 +262,7 @@ class Sniffer {
     async start(deviceNum, PacketProcessorClass) {
         const npcapReady = await checkAndInstallNpcap(this.logger);
         if (!npcapReady) {
-            throw new Error('Npcap no está listo. La aplicación debe salir.');
+            throw new Error('Npcap is not ready. The application must exit.');
         }
 
         const devices = Cap.deviceList();
@@ -282,9 +282,9 @@ class Sniffer {
         }
 
         if (num === undefined || !devices[num]) {
-            this.logger.error('No se pudo detectar automáticamente una interfaz de red válida.');
-            this.logger.error('Asegúrate de que el juego se esté ejecutando e inténtalo de nuevo.');
-            throw new Error('No se pudo detectar una interfaz de red válida.');
+            this.logger.error('Could not automatically detect a valid network interface.');
+            this.logger.error('Make sure the game is running and try again.');
+            throw new Error('Could not detect a valid network interface.');
         }
 
         this.packetProcessor = new PacketProcessorClass({ logger: this.logger, userDataManager: this.userDataManager });

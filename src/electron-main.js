@@ -13,6 +13,7 @@ function lockWindow(lock) {
 
   isLocked = lock;
   mainWindow.setMovable(!isLocked);
+  mainWindow.setAlwaysOnTop(true, "screen-saver");
   if (isLocked) {
     mainWindow.setIgnoreMouseEvents(true, { forward: true });
   } else {
@@ -21,7 +22,6 @@ function lockWindow(lock) {
   mainWindow.webContents.send("on-lock", isLocked);
 }
 
-// Función para verificar si un puerto está en uso
 const checkPort = (port) => {
   return new Promise((resolve) => {
     const server = net.createServer();
@@ -42,7 +42,6 @@ async function findAvailablePort() {
   }
 }
 
-// Función para matar el proceso que está usando un puerto específico
 async function killProcessUsingPort(port) {
   return new Promise((resolve) => {
     exec(`netstat -ano | findstr :${port}`, (error, stdout, stderr) => {
@@ -134,13 +133,11 @@ async function createWindow() {
   }
   console.log(`Opening server.js at ${serverPath}:${serverPort}`);
 
-  // Usar fork para lanzar el servidor como proceso hijo
   serverProcess = fork(serverPath, [serverPort], {
     stdio: ["pipe", "pipe", "pipe", "ipc"],
     execArgv: [],
   });
 
-  // Variables para controlar el arranque del servidor
   if (typeof createWindow.serverLoaded === "undefined")
     createWindow.serverLoaded = false;
   if (typeof createWindow.serverTimeout === "undefined")
@@ -153,16 +150,16 @@ async function createWindow() {
         'data:text/html,<h2 style="color:red">Error: Timeout loading server.</h2>'
       );
     }
-  }, 10000); // 10 segundos de espera
+  }, 10000);
 
   serverProcess.stdout.on("data", (data) => {
     console.log("server stdout: " + data);
     const match = data
       .toString()
-      .match(/Servidor web iniciado en (http:\/\/localhost:\d+)/);
+      .match(/Web server started at (http:\/\/localhost:\d+)/);
     if (match && match[1]) {
       const serverUrl = match[1];
-      console.log("Cargando URL en ventana: " + serverUrl + "/index.html");
+      console.log("Loading URL in window: " + serverUrl + "/index.html");
       mainWindow.loadURL(`${serverUrl}/index.html`);
       createWindow.serverLoaded = true;
       clearTimeout(createWindow.serverTimeout);
@@ -183,17 +180,16 @@ async function createWindow() {
         'data:text/html,<h2 style="color:red">Error: Timeout loading server.</h2>'
       );
     }
-  }, 10000); // 10 segundos de espera
+  }, 10000);
 
   serverProcess.stdout.on("data", (data) => {
     console.log("server stdout: " + data);
-    // Buscar la URL del servidor en la salida del servidor
     const match = data
       .toString()
-      .match(/Servidor web iniciado en (http:\/\/localhost:\d+)/);
+      .match(/Web server started at (http:\/\/localhost:\d+)/);
     if (match && match[1]) {
       const serverUrl = match[1];
-      console.log("Cargando URL en ventana: " + serverUrl + "/index.html");
+      console.log("Loading URL in window: " + serverUrl + "/index.html");
       mainWindow.loadURL(`${serverUrl}/index.html`);
       serverLoaded = true;
       clearTimeout(serverTimeout);
@@ -211,9 +207,7 @@ async function createWindow() {
   mainWindow.on("closed", () => {
     mainWindow = null;
     if (serverProcess) {
-      // Enviar SIGTERM para un cierre limpio
       serverProcess.kill("SIGTERM");
-      // Forzar la terminación si no se cierra después de un tiempo
       setTimeout(() => {
         if (!serverProcess.killed) {
           serverProcess.kill("SIGKILL");

@@ -95,14 +95,12 @@ async function main() {
 
   server.listen(server_port, "0.0.0.0", () => {
     const localUrl = `http://localhost:${server_port}`;
-    console.log(
-      `Servidor web iniciado en ${localUrl}. Puedes acceder desde esta PC usando ${localUrl}/index.html o desde otra PC usando http://[TU_IP_LOCAL]:${server_port}/index.html`
-    );
-    console.log("Servidor WebSocket iniciado");
+    console.log(`Web server started at ${localUrl}.`);
+    console.log("WebSocket server started");
   });
 
-  console.log("¡Bienvenido a BPSR Meter!");
-  console.log("Detectando servidor de juego, por favor espera...");
+  console.log("Welcome to BPSR Meter!");
+  console.log("Detecting game server, please wait...");
 
   setInterval(() => {
     userDataManager.checkTimeoutClear();

@@ -1,6 +1,6 @@
 const fsPromises = require('fs').promises;
 const path = require('path');
-const skillConfig = require('../../tables/skill_names.json').skill_names; // Ajustar la ruta
+const skillConfig = require('../../tables/skill_names.json').skill_names;
 
 class Lock {
     constructor() {
@@ -401,10 +401,10 @@ class UserData {
 class UserDataManager {
     constructor(logger, globalSettings) {
         this.logger = logger;
-        this.globalSettings = globalSettings; // Almacenar globalSettings
+        this.globalSettings = globalSettings;
         this.users = new Map();
-        this.userCache = new Map(); // Mantener userCache para cargar nombres y fightPoint
-        this.playerMap = new Map(); // Mantener playerMap para cargar nombres
+        this.userCache = new Map();
+        this.playerMap = new Map();
 
         this.hpCache = new Map();
         this.startTime = Date.now();
@@ -419,9 +419,8 @@ class UserDataManager {
         };
     }
 
-    async initialize() {
-        // No es necesario cargar caché si no se guarda
-    }
+    async initialize() {}
+    
     /** Obtener o crear usuario
      * @param {number} uid - ID de usuario
      * @returns {UserData} - Instancia de datos de usuario
@@ -438,7 +437,6 @@ class UserDataManager {
                 if (cachedData.name) {
                     user.setName(cachedData.name);
                 }
-                // Ya no se carga la profesión desde el caché de usuario
                 if (cachedData.fightPoint !== undefined && cachedData.fightPoint !== null) {
                     user.setFightPoint(cachedData.fightPoint);
                 }
@@ -467,7 +465,6 @@ class UserDataManager {
      * @param {number} targetUid - ID del objetivo del daño
      */
     addDamage(uid, skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue = 0, targetUid) {
-        // isPaused y globalSettings.onlyRecordEliteDummy se manejarán en el sniffer o en el punto de entrada
         this.checkTimeoutClear();
         const user = this.getUser(uid);
         user.addDamage(skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue);
@@ -484,7 +481,6 @@ class UserDataManager {
      * @param {number} targetUid - ID del objetivo de la curación
      */
     addHealing(uid, skillId, element, healing, isCrit, isLucky, isCauseLucky, targetUid) {
-        // isPaused se manejará en el sniffer o en el punto de entrada
         this.checkTimeoutClear();
         if (uid !== 0) {
             const user = this.getUser(uid);
@@ -498,7 +494,6 @@ class UserDataManager {
      * @param {boolean} isDead - Si es daño letal
      * */
     addTakenDamage(uid, damage, isDead) {
-        // isPaused se manejará en el sniffer o en el punto de entrada
         this.checkTimeoutClear();
         const user = this.getUser(uid);
         user.addTakenDamage(damage, isDead);
@@ -647,7 +642,7 @@ class UserDataManager {
      * @param {number} startTime - Hora de inicio de los datos
      */
     async saveAllUserData(usersToSave = null, startTime = null) {
-        if (!this.globalSettings.enableHistorySave) return; // No guardar historial si la configuración está deshabilitada
+        if (!this.globalSettings.enableHistorySave) return;
 
         try {
             const endTime = Date.now();
@@ -660,7 +655,7 @@ class UserDataManager {
                 endTime,
                 duration: endTime - timestamp,
                 userCount: users.size,
-                version: '3.1', // Usar la versión directamente o pasarla como argumento
+                version: '3.1',
             };
 
             const allUsersData = {};
@@ -684,11 +679,9 @@ class UserDataManager {
                 await fsPromises.mkdir(usersDir, { recursive: true });
             }
 
-            // Guardar resumen de todos los datos de usuario
             const allUserDataPath = path.join(logDir, 'allUserData.json');
             await fsPromises.writeFile(allUserDataPath, JSON.stringify(allUsersData, null, 2), 'utf8');
 
-            // Guardar datos detallados de cada usuario
             for (const [uid, userData] of userDatas.entries()) {
                 const userDataPath = path.join(usersDir, `${uid}.json`);
                 await fsPromises.writeFile(userDataPath, JSON.stringify(userData, null, 2), 'utf8');
