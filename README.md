@@ -6,10 +6,16 @@ BPSR Meter is a desktop application that acts as a real-time DPS (Damage Per Sec
 
 This repository is a fork of [BPSR-Meter](https://github.com/mrsnakke/BPSR-Meter) with some UI adjustments.
 
-![Advance](src/advc.png) ![Lite](src/lite.png)
+![Lite](src/help.png)
+![Advance](src/advc.png)
 
 ## Responsible Use
+
 This tool is designed to help you improve your own performance. **Please do not use it to degrade, harass, or discriminate against other players.** The goal is self-improvement and enjoying the game as a community.
+
+## Compile
+
+Run `npm run dist` to compile the project
 
 ## Installation
 

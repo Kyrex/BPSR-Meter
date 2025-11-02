@@ -116,7 +116,7 @@ const roleColors = {
   healer: "rgba(35, 158, 101, 0.7)",
   self: "rgba(255, 159, 64, 0.7)",
 };
-const formatDuration = (ms) => {
+function formatDuration(ms) {
   if (!ms) return "00:00:00";
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
@@ -135,9 +135,9 @@ const formatDuration = (ms) => {
     minutes.toString().padStart(2, "0"),
     seconds.toString().padStart(2, "0"),
   ].join(":");
-};
+}
 
-const formatDurationMax = (ms) => {
+function formatDurationMax(ms) {
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   if (hours > 0) return `${minutes}h`;
@@ -145,9 +145,9 @@ const formatDurationMax = (ms) => {
   if (minutes > 0) return `${minutes}m`;
   const seconds = totalSeconds % 60;
   return `${seconds}s`;
-};
+}
 
-const formatValue = (value, dec = 1) => {
+function formatValue(value, dec = 1) {
   if (!value) return 0;
   const vt = 1000000000000;
   const vg = 1000000000;
@@ -158,7 +158,7 @@ const formatValue = (value, dec = 1) => {
   if (value >= vm) return (value / vm).toFixed(dec) + "M";
   if (value >= vk) return (value / vk).toFixed(dec) + "k";
   return value.toFixed(0);
-};
+}
 
 function getHealthColor(percentage) {
   percentage = Math.floor(clamp(percentage, 0, 100));
@@ -197,6 +197,6 @@ function getUserProfessions(user) {
   return [mainProf, specProf];
 }
 
-const clamp = (value, min, max) => {
+function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
-};
+}
