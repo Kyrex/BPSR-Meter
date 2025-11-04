@@ -32,6 +32,11 @@ let winState = {
   isLiteMode: true,
 };
 
+function updateModeButton() {
+  if (!elStatsBtn) return;
+  elStatsBtn.className = `fa-solid fa-eye${winState.isLiteMode ? "-slash" : ""}`;
+}
+
 function resizeWindow(width, height) {
   const [w, h] = winState.size;
   const minSize = winState.isLiteMode ? WIN_MIN_SIZE_LITE : WIN_MIN_SIZE_ADVC;
@@ -56,6 +61,7 @@ function loadWindowState() {
       ...JSON.parse(state),
     };
   }
+  updateModeButton();
   const [sx, sy] = winState.size;
   const [dx, dy] = winState.position;
   window.electronAPI?.setPosition(dx, dy);
@@ -116,17 +122,17 @@ function generateBar(user) {
   <tr style="--p: ${barPercent}%; --c: linear-gradient(0, ${color}, transparent); height: ${ADVC_BAR_HEIGHT}px">
     <td style="width: 32px">
       <div class="dps-rank">
-        <img src="${iconSpec}"/>
+        <img src="${iconSpec}" style="width: 32px; height: 32px;"/>
         <span>${rank}</span>
       </div>
     </td>
     <td style="width: 28px;">
-      <img src="${iconClass}" style="width: 20px; height: 20px; vertical-align: middle; translate: 0 4px"/>
+      <img src="${iconClass}" style="width: 28px; height: 28px; vertical-align: middle; translate: 0 4px"/>
       <span style="text-align: center; font-size: 8pt; color: #eeee">${gearScore}</span>
     </td>
     <td style="width: 100%; padding-left: 8px;" class="td-left">      
       <span>${name}</span>
-      <div style="height: 16px;width: 120px;border-radius: 14px;background-color: #1116; margin-top:8px">
+      <div style="height: 16px; width: 120px;border-radius: 14px;background-color: #1116; margin-top:4px">
         <div style="background-color: ${getHealthColor(hpPerc)}; height: 100%; width: ${hpPerc}%; border-radius: 14px">
           <span style="padding: 0 4px; position: absolute; font-size: 9pt; translate: 0 -1px; text-shadow: 0 0 2px #111">🤍 ${hp} / ${maxHp}</span>
         </div>
@@ -303,17 +309,31 @@ function renderTable(users, limit) {
   });
 
   const getHeader = () => {
-    const widths = winState.isLiteMode ? [60, 60, 60] : [80, 100, 80];
-    return `
-    <tr style="height: ${HEADER_HEIGHT}px">
-      <td style="width: 32px" class="st-sublabel">#</td>
-      <td style="width: 28px"></td>
-      <td style="width: 100%" class="td-left"><span class="st-sublabel"><i class="fa-solid fa-clock"></i></span> ${formatDuration(Date.now() - startTime)}</td>
-      <td style="width: ${widths[0]}px">${formatValue(partyDps)}<span class="st-sublabel">/s</span></td>
-      <td style="width: ${widths[1]}px" class="st-sublabel">${winState.isLiteMode ? "CRIT" : ""}</td>
-      <td style="width: ${widths[2]}px">${formatValue(partyDamage)}</td>
-      <td style="width: 50px"></td>
-    </tr>`;
+    if (winState.isLiteMode) {
+      return `
+      <tr style="height: ${HEADER_HEIGHT}px">
+        <td style="width: 32px" class="st-sublabel">#</td>
+        <td style="width: 28px"></td>
+        <td style="width: 100%" class="td-left"><span class="st-sublabel"><i class="fa-solid fa-clock"></i></span> ${formatDuration(Date.now() - startTime)}</td>
+        <td style="width: 60px">${formatValue(partyDps)}<span class="st-sublabel">/s</span></td>
+        <td style="width: 60px" class="st-sublabel">${winState.isLiteMode ? "CRIT" : ""}</td>
+        <td style="width: 60px">${formatValue(partyDamage)}</td>
+        <td style="width: 50px"></td>
+      </tr>`;
+    } else {
+      return `
+      <tr style="height: ${HEADER_HEIGHT}px">
+        <td style="width: 32px" class="st-sublabel">#</td>
+        <td style="width: 28px"></td>
+        <td style="width: 100%" class="td-left"><span class="st-sublabel"><i class="fa-solid fa-clock"></i></span> ${formatDuration(Date.now() - startTime)}</td>
+        <td style="width: 80px; text-align: end"><span>${formatValue(partyDps)}<span class="st-sublabel" style="display: inline-block; width: 24px; text-align: start">/s</span></span></td>
+        <td style="width: 100px" class="st-sublabel">${winState.isLiteMode ? "CRIT" : ""}</td>
+        <td style="width: 80px; text-align: end">
+          <span>${formatValue(partyDamage)}<span class="st-sublabel" style="display: inline-block; width: 18px"></span></span>
+        </td>
+        <td style="width: 50px"></td>
+      </tr>`;
+    }
   };
 
   const renderable = users.slice(0, limit);
@@ -362,6 +382,7 @@ window.addEventListener("DOMContentLoaded", (_) => {
   elResetBtn.addEventListener("click", () => clear());
   elStatsBtn.addEventListener("click", () => {
     winState.isLiteMode = !winState.isLiteMode;
+    updateModeButton();
     autoResize();
   });
   elSwapBtn.addEventListener("click", () => {

@@ -93,22 +93,18 @@
       cursor: pointer;
     }
 
+    body:not(.locked) #stats-button:hover {
+      color: #3991c4;
+      cursor: pointer;
+    }
+
     body:not(.locked) #reset-button:hover {
-      color: #04a;
+      color: #3991c4;
       cursor: pointer;
     }
 
     body:not(.locked) #close-button:hover {
       color: #a00;
-      cursor: pointer;
-    }
-
-    #stats-button {
-      opacity: 0.8;
-    }
-
-    body:not(.locked) #stats-button:hover {
-      opacity: 1;
       cursor: pointer;
     }
 
@@ -216,7 +212,11 @@
         <div id="dps-header" class="dps-flex-row">
           <i class="dps-title">DPS</i>
           <i id="swap-button" style="width: 30px; text-align: end">5P</i>
-          <span id="stats-button" class="">📈</span>
+          <i
+            id="stats-button"
+            class="fa-solid fa-eye-slash"
+            style="width: 22px; text-align: center"
+          ></i>
           <i id="reset-button" class="fa-solid fa-arrows-rotate"></i>
           <select id="dps-logs" class="st-spacer"></select>
           <i id="close-button" class="fa-solid fa-xmark"></i>

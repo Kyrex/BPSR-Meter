@@ -138,40 +138,6 @@ async function createWindow() {
     execArgv: [],
   });
 
-  if (typeof createWindow.serverLoaded === "undefined")
-    createWindow.serverLoaded = false;
-  if (typeof createWindow.serverTimeout === "undefined")
-    createWindow.serverTimeout = null;
-  createWindow.serverLoaded = false;
-  createWindow.serverTimeout = setTimeout(() => {
-    if (!createWindow.serverLoaded) {
-      console.log("Timeout loading server.");
-      mainWindow.loadURL(
-        'data:text/html,<h2 style="color:red">Error: Timeout loading server.</h2>'
-      );
-    }
-  }, 10000);
-
-  serverProcess.stdout.on("data", (data) => {
-    console.log("server stdout: " + data);
-    const match = data
-      .toString()
-      .match(/Web server started at (http:\/\/localhost:\d+)/);
-    if (match && match[1]) {
-      const serverUrl = match[1];
-      console.log("Loading URL in window: " + serverUrl + "/index.html");
-      mainWindow.loadURL(`${serverUrl}/index.html`);
-      createWindow.serverLoaded = true;
-      clearTimeout(createWindow.serverTimeout);
-    }
-  });
-  serverProcess.stderr.on("data", (data) => {
-    console.log("server stderr: " + data);
-  });
-  serverProcess.on("close", (code) => {
-    console.log("server process exited with code " + code);
-  });
-
   let serverLoaded = false;
   let serverTimeout = setTimeout(() => {
     if (!serverLoaded) {
@@ -184,6 +150,7 @@ async function createWindow() {
 
   serverProcess.stdout.on("data", (data) => {
     console.log("server stdout: " + data);
+    if (serverLoaded) return;
     const match = data
       .toString()
       .match(/Web server started at (http:\/\/localhost:\d+)/);
@@ -195,11 +162,9 @@ async function createWindow() {
       clearTimeout(serverTimeout);
     }
   });
-
   serverProcess.stderr.on("data", (data) => {
     console.log("server stderr: " + data);
   });
-
   serverProcess.on("close", (code) => {
     console.log("server process exited with code " + code);
   });

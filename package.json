@@ -1,6 +1,6 @@
 {
   "name": "ao-meter",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Ao-Meter",
   "main": "src/electron-main.js",
   "bin": {
@@ -37,9 +37,9 @@
   },
   "devDependencies": {
     "@yao-pkg/pkg": "^6.6.0",
-    "electron-rebuild": "^3.2.9",
     "electron": "^38.0.0",
     "electron-builder": "^26.0.12",
+    "electron-rebuild": "^3.2.9",
     "prettier": "^3.6.2",
     "protobufjs-cli": "^1.1.3"
   },

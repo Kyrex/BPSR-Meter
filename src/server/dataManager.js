@@ -628,7 +628,7 @@ class UserDataManager {
 
     /** Limpiar todos los datos de usuario */
     clearAll() {
-        this.users = new Map();
+        this.users.forEach((u) => u.reset());
         this.startTime = Date.now();
     }
 
